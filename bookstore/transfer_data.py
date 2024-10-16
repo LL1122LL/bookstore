@@ -1,15 +1,27 @@
 import sqlite3
 from pymongo import MongoClient
-
+import os
+print(os.getcwd())
 
 sqlite_conn = sqlite3.connect('fe/data/book.db')
 sqlite_cursor = sqlite_conn.cursor()
 
 
-client = MongoClient('localhost', 27017) 
-db = client['bookstore']  
-book_collection = db['books'] 
+mongo_client = MongoClient('localhost', 27017) 
 
+
+db_list = mongo_client.list_database_names()
+
+print("db_list",db_list)
+
+if 'bookstore' in db_list:
+    mongo_client.drop_database('bookstore')
+    print("Existing 'bookstore' database found and deleted.")
+
+
+
+db = mongo_client['bookstore']  
+book_collection = db['books'] 
 
 sqlite_cursor.execute("SELECT * FROM book")
 rows = sqlite_cursor.fetchall()
@@ -27,6 +39,6 @@ for row in rows:
     book_collection.insert_one(book_document) 
 
 sqlite_conn.close()
-client.close()
+mongo_client.close()
 
 print("successfully transfer")

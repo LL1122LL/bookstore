@@ -40,8 +40,12 @@ def be_run():
     logging.getLogger().addHandler(handler)
 
     app = Flask(__name__)
+    @app.route('/')
+    def home():
+        return "Welcome to the Bookstore API!"
     app.register_blueprint(bp_shutdown)
     app.register_blueprint(auth.bp_auth)
+    print("auth.bp_auth",auth.bp_auth)
     app.register_blueprint(seller.bp_seller)
     app.register_blueprint(buyer.bp_buyer)
     init_completed_event.set()
