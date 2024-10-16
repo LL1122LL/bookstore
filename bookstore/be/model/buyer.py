@@ -23,14 +23,18 @@ class Buyer(db_conn.DBConn):
                 return error.error_non_exist_store_id(store_id) + (order_id,)
             uid = "{}_{}_{}".format(user_id, store_id, str(uuid.uuid1()))
 
+            if len(id_and_count) == 0:
+                return error.error_stock_level_low("-1") + (order_id,)
+            
             for book_id, count in id_and_count:
-                result = self.db.stores.find_one({"store_id": store_id, "book_id": book_id})
+                result = self.db.store.find_one({"store_id": store_id, "book_id": book_id})
 
                 if result is None:
-                    return error.error_non_exist_book_id(book_id) + (order_id,)
+                    tmp = error.error_non_exist_book_id(book_id) + (order_id,)
+                    return tmp
 
-                stock_level = result[1]
-                book_info = result[2]
+                stock_level = result["stock_level"]
+                book_info = result["book_info"]
                 book_info_json = json.loads(book_info)
                 price = book_info_json.get("price")
 
@@ -38,9 +42,9 @@ class Buyer(db_conn.DBConn):
                     return error.error_stock_level_low(book_id) + (order_id,)
 
                 condition = {"store_id": store_id, "book_id": book_id, "stock_level": {'$gte': count}}
-                self.db.stores.update_one(condition,{"$inc": {"stock_level": -1}})
+                self.db.store.update_one(condition,{"$inc": {"stock_level": -1}})
 
-                self.db.new_order_details.insert_one({
+                self.db.new_order_detail.insert_one({
                     "order_id": uid,
                     "book_id": book_id,
                     "count": count,
@@ -48,7 +52,7 @@ class Buyer(db_conn.DBConn):
                     "books_status": 2
                 })
 
-            self.db.new_orders.insert_one({
+            self.db.new_order.insert_one({
                     "order_id": uid,
                     "user_id": user_id,
                     "store_id": store_id,
@@ -76,7 +80,7 @@ class Buyer(db_conn.DBConn):
             if buyer_id != user_id:
                 return error.error_authorization_fail()
 
-            usr_info = self.db.users.find_one({"user_id": buyer_id})
+            usr_info = self.db.user.find_one({"user_id": buyer_id})
             if usr_info is None:
                 return error.error_non_exist_user_id(buyer_id)
             balance = usr_info["balance"]
@@ -105,14 +109,14 @@ class Buyer(db_conn.DBConn):
                 return error.error_not_sufficient_funds(order_id)
 
 
-            result = self.db.users.update_many(
+            result = self.db.user.update_many(
                 {"user_id": buyer_id, "balance": {"$gte": total_price}},
                 {"$inc": {"balance": -total_price}}
             )
             if result.modified_count == 0:
                 return error.error_not_sufficient_funds(order_id)
 
-            result = self.db.users.update_many(
+            result = self.db.user.update_many(
                 {"user_id": seller_id},
                 {"$inc": {"balance": total_price}}
             )
@@ -141,18 +145,20 @@ class Buyer(db_conn.DBConn):
     def add_funds(self, user_id, password, add_value) -> (int, str):
         try:
             # 查找用户信息
-            user_info = self.db.users.find_one({"user_id": user_id})
+            user_info = self.db.user.find_one({"user_id": user_id})
             
             # 检查用户是否存在
             if user_info is None:
                 return error.error_authorization_fail()
             
             # 验证密码
-            if user_info["password"] != password:
+            if user_info.get("password") != password:
                 return error.error_authorization_fail()
 
             # 更新用户余额
-            self.db.users.update_one({"user_id": user_id}, {"$inc": {"balance": add_value}})
+            res = self.db.user.update_one({"user_id": user_id}, {"$inc": {"balance": add_value}})
+            if res.matched_count == 0:
+                return error.error_non_exist_user_id(user_id)
 
         except Exception as e:
             return 528, "{}".format(str(e))

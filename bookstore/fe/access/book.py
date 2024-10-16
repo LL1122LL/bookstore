@@ -42,7 +42,7 @@ class BookDB:
         self.db = self.client['bookstore']
 
     def get_book_count(self):
-        return self.db.books.count_documents({})
+        return self.db.book.count_documents({})
 
     def get_book_info(self, start, size) -> [Book]:
         books = []
@@ -57,7 +57,7 @@ class BookDB:
         #     "LIMIT ? OFFSET ?",
         #     (size, start),
         # )
-        cursor = self.db.books.find().sort([("id", 1)]).skip(start).limit(size)#需保证books的collection的存在
+        cursor = self.db.book.find().sort([("id", 1)]).skip(start).limit(size)#需保证books的collection的存在
         for row in cursor:
             book = Book()
             book.id = row['id']

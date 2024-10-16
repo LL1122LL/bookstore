@@ -16,7 +16,7 @@ class Store:
     def init_tables(self):
         self.user = self.db['user']
         self.store = self.db['store']
-        self.books = self.db['books']
+        self.book = self.db['book']
         self.order_detail = self.db['order_detail']
         self.order = self.db['order']
 
@@ -25,8 +25,8 @@ class Store:
         # self.book_col.create_index(
         #     [("title", "text"), ("tags", "text"), ("book_intro", "text"), ("content", "text")])
 
-    def get_db_conn(self) -> sqlite.Connection:
-        return sqlite.connect(self.database)
+    # def get_db_conn(self) -> sqlite.Connection:
+    #     return sqlite.connect(self.database)
 
 
 database_instance: Store = None

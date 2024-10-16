@@ -55,7 +55,7 @@ class User(db_conn.DBConn):
 
     def register(self, user_id: str, password: str):
         # 检查用户是否已存在
-        res = self.db.users.find_one({"user_id": user_id})
+        res = self.db.user.find_one({"user_id": user_id})
         if res is not None:
             return error.error_exist_user_id(user_id)
         
@@ -68,7 +68,7 @@ class User(db_conn.DBConn):
             #     (user_id, password, 0, token, terminal),
             # )
             # self.conn.commit()
-            self.db.users.insert_one({
+            self.db.user.insert_one({
                 "user_id": user_id,
                 "password": password,
                 "balance": 0,
@@ -80,7 +80,7 @@ class User(db_conn.DBConn):
         return 200, "ok"
 
     def check_token(self, user_id: str, token: str) -> (int, str):
-        res = self.db.users.find_one({"user_id": user_id})
+        res = self.db.user.find_one({"user_id": user_id})
         if res is None:
             return error.error_authorization_fail()
         db_token = res["token"]
@@ -93,12 +93,11 @@ class User(db_conn.DBConn):
         #     "SELECT password from user where user_id=?", (user_id,)
         # )
         # row = cursor.fetchone()
-        user_info = self.db.users.find_one({"user_id": user_id})
+        user_info = self.db.user.find_one({"user_id": user_id})
         if user_info is None:
             return error.error_authorization_fail()
 
         if password != user_info["password"]:
-            #TODO :这里假设password一定存在，需要注意
             return error.error_authorization_fail()
         return 200, "ok"
 
@@ -114,7 +113,7 @@ class User(db_conn.DBConn):
             #     "UPDATE user set token= ? , terminal = ? where user_id = ?",
             #     (token, terminal, user_id),
             # )
-            res = self.db.users.update_one({"user_id": user_id}, {"$set": {"token": token, "terminal": terminal}})
+            res = self.db.user.update_one({"user_id": user_id}, {"$set": {"token": token, "terminal": terminal}})
             if res.modified_count == 0:
                 return error.error_authorization_fail() + ("",)
             
@@ -141,7 +140,7 @@ class User(db_conn.DBConn):
             #     return error.error_authorization_fail()
 
             # self.conn.commit()
-            res = self.db.users.update_one({"user_id": user_id}, {"$set": {"token": dummy_token, "terminal": terminal}})
+            res = self.db.user.update_one({"user_id": user_id}, {"$set": {"token": dummy_token, "terminal": terminal}})
             if res.modified_count == 0:
                 return error.error_authorization_fail() + ("",)
             
@@ -157,8 +156,8 @@ class User(db_conn.DBConn):
             if code != 200:
                 return code, message
 
-            delete_count = self.db.users.delete_one({"user_id": user_id})
-            if delete_count != 1:
+            res = self.db.user.delete_one({"user_id": user_id})
+            if res is None:
                 return error.error_authorization_fail()
         except Exception as e:
             return 528, "{}".format(str(e))
@@ -184,7 +183,7 @@ class User(db_conn.DBConn):
             #     return error.error_authorization_fail()
 
             # self.conn.commit()
-            res = self.db.users.update_one({"user_id": user_id},
+            res = self.db.user.update_one({"user_id": user_id},
                                      {"$set": {"password": new_password, "token": token, "terminal": terminal}})
             if res.modified_count == 0:
                 return error.error_authorization_fail()

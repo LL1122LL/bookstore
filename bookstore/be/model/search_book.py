@@ -30,9 +30,9 @@ class SearchBooks:
             query['$or'] = search_criteria
 
         # 获取总结果数
-        total_results = self.db.books.count_documents(query)
+        total_results = self.db.book.count_documents(query)
 
-        books = self.db.books.find(query)
+        books = self.db.book.find(query)
         book_titles = [book['title'] for book in books]
 
         if total_results == 0:
@@ -43,7 +43,7 @@ class SearchBooks:
 
     def get_stores(self, store_name, search_query, search_scopes):
         # 初始化结果列表
-        stores = self.db.stores.find({'store_id': store_name})
+        stores = self.db.store.find({'store_id': store_name})
 
         query = {}  # 初始化一个空的query字典
         for store in stores:
@@ -77,8 +77,8 @@ class SearchBooks:
         if not query:  # 如果没有匹配的店铺，设置一个默认的查询条件
             query = {'store_id': 'non_existent_store_id'}
 
-        total_results = self.db.stores.count_documents(query)
-        books = self.db.stores.find(query)
+        total_results = self.db.store.count_documents(query)
+        books = self.db.store.find(query)
         book_titles = [book['book_info']['title'] for book in books]
 
         if total_results == 0:
