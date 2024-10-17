@@ -12,19 +12,16 @@ class Buyer(db_conn.DBConn):
         self.client = MongoClient('localhost', 27017)
         self.db = self.client['bookstore']
 
-    def new_order(
-            self, user_id: str, store_id: str, id_and_count: [(str, int)]
-    ) -> (int, str, str):
+    def new_order(self, user_id: str, store_id: str, id_and_count: [(str, int)]) -> (int, str, str):
         order_id = ""
         try:
-            # 查询用户是否存在，不存在返回错误
             user = self.db.user.find_one({"user_id": user_id})
             if user is None:
                 return error.error_non_exist_user_id(user_id) + (order_id,)
 
             store = self.db.store.find_one({"store_id": store_id})
             if store is None:
-                return error.error_non_exist_store_id(user_id) + (order_id,)
+                return error.error_non_exist_store_id(store_id) + (order_id,)
 
             uid = "{}_{}_{}".format(user_id, store_id, str(uuid.uuid1()))
 
@@ -62,11 +59,13 @@ class Buyer(db_conn.DBConn):
 
             self.db.new_order.insert_one(new_order)
             order_id = uid
+
         except Exception as e:
             logging.info("528, {}".format(str(e)))
             return 528, "{}".format(str(e)), ""
 
         return 200, "ok", order_id
+
 
     def payment(self, user_id: str, password: str, order_id: str) -> (int, str):
         try:
@@ -86,7 +85,7 @@ class Buyer(db_conn.DBConn):
             if usr_info is None:
                 return error.error_non_exist_user_id(buyer_id)
             balance = usr_info["balance"]
-            if password != usr_info["passwprd"]:
+            if password != usr_info["password"]:
                 return error.error_authorization_fail()
 
 
