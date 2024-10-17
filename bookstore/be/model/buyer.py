@@ -13,52 +13,54 @@ class Buyer(db_conn.DBConn):
         self.db = self.client['bookstore']
 
     def new_order(
-        self, user_id: str, store_id: str, id_and_count: [(str, int)]
+            self, user_id: str, store_id: str, id_and_count: [(str, int)]
     ) -> (int, str, str):
         order_id = ""
         try:
-            if not self.user_id_exist(user_id):
+            # æŸ¥è¯¢ç”¨æˆ·æ˜¯å¦å­˜åœ¨ï¼Œä¸å­˜åœ¨è¿”å›é”™è¯¯
+            user = self.db.user.find_one({"user_id": user_id})
+            if user is None:
                 return error.error_non_exist_user_id(user_id) + (order_id,)
-            if not self.store_id_exist(store_id):
-                return error.error_non_exist_store_id(store_id) + (order_id,)
+
+            store = self.db.store.find_one({"store_id": store_id})
+            if store is None:
+                return error.error_non_exist_store_id(user_id) + (order_id,)
+
             uid = "{}_{}_{}".format(user_id, store_id, str(uuid.uuid1()))
 
-            if len(id_and_count) == 0:
-                return error.error_stock_level_low("-1") + (order_id,)
-            
             for book_id, count in id_and_count:
                 result = self.db.store.find_one({"store_id": store_id, "book_id": book_id})
-
                 if result is None:
-                    tmp = error.error_non_exist_book_id(book_id) + (order_id,)
-                    return tmp
+                    return error.error_non_exist_book_id(book_id) + (order_id,)
 
                 stock_level = result["stock_level"]
                 book_info = result["book_info"]
-                book_info_json = json.loads(book_info)
-                price = book_info_json.get("price")
-
+                price = book_info["price"]
                 if stock_level < count:
                     return error.error_stock_level_low(book_id) + (order_id,)
 
                 condition = {"store_id": store_id, "book_id": book_id, "stock_level": {'$gte': count}}
-                self.db.store.update_one(condition,{"$inc": {"stock_level": -1}})
+                self.db.store.update_one(condition, {"$inc": {"stock_level": -1}})
 
-                self.db.new_order_detail.insert_one({
+                new_order_detail = {
                     "order_id": uid,
                     "book_id": book_id,
                     "count": count,
                     "price": price,
                     "books_status": 2
-                })
+                }
+                self.db.new_order_detail.insert_one(new_order_detail)
 
-            self.db.new_order.insert_one({
-                    "order_id": uid,
-                    "user_id": user_id,
-                    "store_id": store_id,
-                    "books_status": 2,
-                    # "order_time": now_time,
-            })
+
+            new_order = {
+                "order_id": uid,
+                "user_id": user_id,
+                "store_id": store_id,
+                "books_status": 2,
+
+            }
+
+            self.db.new_order.insert_one(new_order)
             order_id = uid
         except Exception as e:
             logging.info("528, {}".format(str(e)))
@@ -123,8 +125,8 @@ class Buyer(db_conn.DBConn):
             if result.modified_count == 0:
                 return error.error_not_sufficient_funds(order_id)
 
-            # ÒÑ¾­¸¶¿îµÄ»á´ÓorderµÄÁ½¸ö±íÀïÃæÉ¾³ıµô
-            # É¾³ı¶©µ¥ºÍ¶©µ¥ÏêÏ¸ĞÅÏ¢
+            # ï¿½Ñ¾ï¿½ï¿½ï¿½ï¿½ï¿½Ä»ï¿½ï¿½orderï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É¾ï¿½ï¿½ï¿½ï¿½
+            # É¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¶ï¿½ï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ï¿½Ï¢
             delete_count = self.db.new_order.delete_many({"order_id": order_id})
             
             if delete_count == 0:
@@ -144,18 +146,18 @@ class Buyer(db_conn.DBConn):
 
     def add_funds(self, user_id, password, add_value) -> (int, str):
         try:
-            # ²éÕÒÓÃ»§ĞÅÏ¢
+            # ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½Ï¢
             user_info = self.db.user.find_one({"user_id": user_id})
             
-            # ¼ì²éÓÃ»§ÊÇ·ñ´æÔÚ
+            # ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½
             if user_info is None:
                 return error.error_authorization_fail()
             
-            # ÑéÖ¤ÃÜÂë
+            # ï¿½ï¿½Ö¤ï¿½ï¿½ï¿½ï¿½
             if user_info.get("password") != password:
                 return error.error_authorization_fail()
 
-            # ¸üĞÂÓÃ»§Óà¶î
+            # ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½
             res = self.db.user.update_one({"user_id": user_id}, {"$inc": {"balance": add_value}})
             if res.matched_count == 0:
                 return error.error_non_exist_user_id(user_id)
