@@ -57,7 +57,7 @@ class BookDB:
         #     "LIMIT ? OFFSET ?",
         #     (size, start),
         # )
-        cursor = self.db.book.find().sort([("id", 1)]).skip(start).limit(size)#需保证books的collection的存在
+        cursor = self.db.book.find().sort([("id", 1)]).skip(start).limit(size)#锟借保证books锟斤拷collection锟侥达拷锟斤拷
         for row in cursor:
             book = Book()
             book.id = row['id']
@@ -82,11 +82,12 @@ class BookDB:
 
             for tag in tags.split("\n"):
                 if tag.strip() != "":
-                    book.tags.append(tag)
-            for i in range(0, random.randint(0, 9)):
-                if picture is not None:
-                    encode_str = base64.b64encode(picture).decode("utf-8")
-                    book.pictures.append(encode_str)
+                   book.tags.append(tag)
+            # for i in range(0, random.randint(0, 9)):
+            #     if picture is not None:
+            #         encode_str = base64.b64encode(picture).decode("utf-8")
+            #         book.pictures.append(encode_str)
+            book.pictures = []
             books.append(book)
             # print(tags.decode('utf-8'))
 
