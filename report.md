@@ -40,9 +40,9 @@ new_order表：
 
 主键为（order_id）
 
-| order_id | user_id | store_id | books_status |
-| -------- | ------- | -------- | ------ |
-|          |         |          |        |
+| order_id | user_id | store_id | books_status | create_time |
+| -------- | ------- | -------- | ------ | ------ |
+|          |         |          |        |        |
 
 
 
@@ -61,5 +61,4 @@ new_order_detail表：
 | order_id                         | book_id | count | price |
 | -------------------------------- | ------- | ----- | ----- |
 | 主键为联合主键(order_id,book_id) |         |       |       |
-
 
