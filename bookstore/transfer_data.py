@@ -3,7 +3,9 @@ from pymongo import MongoClient
 import os
 print(os.getcwd())
 
-sqlite_conn = sqlite3.connect('fe/data/book.db')
+#sqlite_conn = sqlite3.connect('fe/data/book.db')
+sqlite_conn = sqlite3.connect('E:\\juypter\\DataSql\\bookstore3\\CDMS.Xuan_ZHOU.2024Fall.DaSE\\project1\\bookstore\\fe\\data\\book.db')
+
 sqlite_cursor = sqlite_conn.cursor()
 
 
@@ -21,7 +23,7 @@ if 'bookstore' in db_list:
 
 
 db = mongo_client['bookstore']  
-book_collection = db['books'] 
+book_collection = db['book'] 
 
 sqlite_cursor.execute("SELECT * FROM book")
 rows = sqlite_cursor.fetchall()

@@ -88,3 +88,31 @@ class Seller(db_conn.DBConn):
         except BaseException as e:
             return 530, "{}".format(str(e))
         return 200, "ok"
+
+    def send_books(self,user_id: str,order_id: str):
+        res = self.db.new_order.find_one({"order_id": order_id})
+        if res is None:
+            return error.error_invalid_order_id(order_id)
+
+        store_id = res["store_id"]
+        books_status = res["books_status"]
+
+        # ¸ù¾Ý store_id ÕÒÂô¼Ò
+        result = self.db.user_store.find_one({"store_id": store_id})
+        seller_id = result["user_id"]
+
+        if seller_id != user_id:
+            return error.error_authorization_fail()
+
+        if books_status == 0:
+            return error.error_book_has_sent(order_id)
+
+        if books_status == 2:
+            return error.error_not_paid_book(order_id)
+
+        if books_status == 3:
+            return error.error_book_has_received(order_id)
+
+        self.db.new_order.update_one({"order_id": order_id}, {"$set": {"books_status": 0}})
+
+        return 200, "ok"

@@ -44,17 +44,14 @@ class Buyer(db_conn.DBConn):
                     "book_id": book_id,
                     "count": count,
                     "price": price,
-                    "books_status": 2
                 }
                 self.db.new_order_detail.insert_one(new_order_detail)
-
 
             new_order = {
                 "order_id": uid,
                 "user_id": user_id,
                 "store_id": store_id,
                 "books_status": 2,
-
             }
 
             self.db.new_order.insert_one(new_order)
@@ -166,4 +163,23 @@ class Buyer(db_conn.DBConn):
         except BaseException as e:
             return 530, "{}".format(str(e))
 
+        return 200, "ok"
+
+    def receive_book(self,user_id: str, order_id: str) -> (int, str):
+        try :
+            res = self.db.new_order.find_one({"order_id": order_id})
+            if res == None:
+                return error.error_invalid_order_id(order_id)
+            buyer_id = res["user_id"]
+            paid_status = res["books_status"]
+
+            if buyer_id != user_id:
+                return error.error_authorization_fail()
+            if paid_status == 2:
+                return error.error_books_not_sent(order_id)
+            if paid_status == 3:
+                return error.error_books_repeat_receive(order_id)
+            self.db.new_order.update_one({"order_id": order_id}, {"$set": {"status": 3}})
+        except BaseException as e:
+            return 528, "{}".format(str(e))
         return 200, "ok"
