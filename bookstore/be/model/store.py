@@ -15,14 +15,15 @@ class Store:
 
     def init_tables(self):
         self.user = self.db['user']
+        self.user_store = self.db['user_store']
         self.store = self.db['store']
         self.book = self.db['book']
         self.order_detail = self.db['order_detail']
         self.order = self.db['order']
 
-        # self.store_col.create_index([("store_id", 1)], unique=True)
-        # self.user_col.create_index([("user_id", 1)], unique=True)
-        # self.book_col.create_index(
+        # self.store.create_index([("store_id", 1)], unique=True)
+        # self.user.create_index([("user_id", 1)], unique=True)
+        # self.book.create_index(
         #     [("title", "text"), ("tags", "text"), ("book_intro", "text"), ("content", "text")])
 
     # def get_db_conn(self) -> sqlite.Connection:

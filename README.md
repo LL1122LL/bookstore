@@ -63,11 +63,6 @@ bookstore
   |-- ....
 ```
 
-## 代码仓库
-
-从 [CDMS.Xuan_ZHOU.2024Fall.DaSE - CDMS.Xuan_ZHOU.2024Fall.DaSE - 水杉码园 (shuishan.net.cn)](https://gitea.shuishan.net.cn/51275903093/CDMS.Xuan_ZHOU.2024Fall.DaSE/_upload/master/project1) 获取代码，并以 bookstore 文件夹为根目录打开
-代码。 请大家从公共仓库 clone 到自己仓库下，然后继续作业。
-
 
 ## 安装配置
 安装 python (需要 python3.6 以上) 
@@ -96,10 +91,8 @@ bash script/test.sh
 
 ## 要求
 
-2～3人一组，做好分工，完成下述内容：
-
-1.bookstore 文件夹是该项目的 demo，采用 Flask 后端框架与 SQLite 数据库，实现了前60%功能以及对应的测试用例代码。
-**要求大家创建本地 MongoDB 数据库，将`bookstore/fe/data/book.db`中的内容以合适的形式存入本地数据库，后续所有数据读写都在本地的 MongoDB 数据库中进行** 
+**要求大家创建本地 MongoDB 数据库，将`bookstore/fe/data/book.db`中的内容以合适的形式存入本地数据库，后续所有数据读写都在本地的 MongoDB 数据库中进行**   
+运行transfer_data.py文件，将把`bookstore/fe/data/book.db`转移到MongoDB中
 
  bookstore/fe/data/book.db中包含测试的数据，从豆瓣网抓取的图书信息，
  其DDL为：

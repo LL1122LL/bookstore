@@ -28,11 +28,33 @@ user_store表：
 
 store表：
 
-主键为联合主键(store_id,book_id)
+主键为(store_id)
 
-| store_id | book_id | book_info              | stock_level             |
-| -------- | ------- | ---------------------- | ----------------------- |
-|          |         | string类型，由json转换 | 对应store的book的存储量 |
+| store_id | book_ids | stock_level             |
+| -------- | -------- | ----------------------- |
+|          |          | 对应store的book的存储量 |
+
+```
+{
+  "store_id": "store_1",
+  "book_stock_info": [
+    { "book_id": "book_1", "stock_level": 10 },
+    { "book_id": "book_2", "stock_level": 5 }
+  ]
+}
+```
+
+
+
+book表
+
+| book_id | book_info(可以继续转换) |
+| ------- | ----------------------- |
+|         | string类型，由json转换  |
+
+该表设立的假设，每个book仅有一个id，即同一本书，在不同的store中，其id相同。
+
+符合该假设的现实场景为：商店添加书本，将书本信息提交到售书平台,由售书平台分发一个ID，记录书本信息到平台的数据库内，然后返回ID给商家。
 
 
 

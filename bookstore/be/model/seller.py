@@ -12,7 +12,7 @@ class Seller(db_conn.DBConn):
         user_id: str,
         store_id: str,
         book_id: str,
-        book_json_str: str,
+        book_json_str: str, # Unused
         stock_level: int,
     ):
         try:
@@ -29,12 +29,24 @@ class Seller(db_conn.DBConn):
             #     (store_id, book_id, book_json_str, stock_level),
             # )
             # self.conn.commit()
-            self.db.store.insert_one({
-                "store_id": store_id,
-                "book_id": book_id,
-                "book_info": json.loads(book_json_str),
-                "stock_level": stock_level
-            })
+            # self.db.store.insert_one({
+            #     "store_id": store_id,
+            #     "book_id": book_id,
+            #     # "book_info": json.loads(book_json_str),
+            #     "stock_level": stock_level
+            # })
+
+            self.db.store.update_one(
+                {"store_id": store_id},
+                {
+                    "$push": {
+                        "book_stock_info": {
+                            "book_id": book_id,
+                            "stock_level": stock_level
+                        }
+                    }
+                }
+            )
         except Exception as e:
             return 528, "{}".format(str(e))
         except BaseException as e:
@@ -58,10 +70,11 @@ class Seller(db_conn.DBConn):
             #     (add_stock_level, store_id, book_id),
             # )
             # self.conn.commit()
-            self.db.store.update_one(
-                {"store_id": store_id, "book_id": book_id},
-                {"$inc": {"stock_level": add_stock_level}}
+            res = self.db.store.update_one(
+                {"store_id": store_id, "book_stock_info.book_id": book_id},
+                {"$inc": {"book_stock_info.$.stock_level": add_stock_level}}
             )
+            assert res.modified_count > 0
         except Exception as e:
             return 528, "{}".format(str(e))
         except BaseException as e:
@@ -83,6 +96,12 @@ class Seller(db_conn.DBConn):
                 "store_id": store_id,
                 "user_id": user_id
             })
+            
+            self.db.store.insert_one({
+                "store_id":store_id,
+                "book_stock_info":[]
+            })
+
         except Exception as e:
             return 528, "{}".format(str(e))
         except BaseException as e:
@@ -113,6 +132,6 @@ class Seller(db_conn.DBConn):
         if books_status == 3:
             return error.error_book_has_received(order_id)
 
-        self.db.new_order.update_one({"order_id": order_id}, {"$set": {"books_status": 0}})
-
+        res = self.db.new_order.update_one({"order_id": order_id}, {"$set": {"books_status": 0}})
+        assert res.modified_count > 0 #only for debug£¬it may also be equal to zero when multi-proc.
         return 200, "ok"

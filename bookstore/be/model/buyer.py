@@ -9,8 +9,9 @@ from pymongo import MongoClient
 
 class Buyer(db_conn.DBConn):
     def __init__(self):
-        self.client = MongoClient('localhost', 27017)
-        self.db = self.client['bookstore']
+        # self.client = MongoClient('localhost', 27017)
+        # self.db = self.client['bookstore']
+        super().__init__()
 
     def new_order(self, user_id: str, store_id: str, id_and_count: [(str, int)]) -> (int, str, str):
         order_id = ""
@@ -18,26 +19,39 @@ class Buyer(db_conn.DBConn):
             user = self.db.user.find_one({"user_id": user_id})
             if user is None:
                 return error.error_non_exist_user_id(user_id) + (order_id,)
-
-            store = self.db.store.find_one({"store_id": store_id})
-            if store is None:
+            
+            if self.store_id_exist(store_id) is False:
                 return error.error_non_exist_store_id(store_id) + (order_id,)
 
             uid = "{}_{}_{}".format(user_id, store_id, str(uuid.uuid1()))
 
             for book_id, count in id_and_count:
-                result = self.db.store.find_one({"store_id": store_id, "book_id": book_id})
+                result = self.db.store.find_one(
+                    {"store_id": store_id,"book_stock_info.book_id": book_id},
+                    {"book_stock_info.$": 1}
+                    )
+                # result = self.db.store.find_one({"store_id": store_id, "book_id": book_id})
                 if result is None:
                     return error.error_non_exist_book_id(book_id) + (order_id,)
+                
+                stock_level = result["book_stock_info"][0]["stock_level"]
+                #stock_level = result["stock_level"]
+                price = self.get_book_price(book_id)
 
-                stock_level = result["stock_level"]
-                book_info = result["book_info"]
-                price = book_info["price"]
                 if stock_level < count:
                     return error.error_stock_level_low(book_id) + (order_id,)
 
-                condition = {"store_id": store_id, "book_id": book_id, "stock_level": {'$gte': count}}
-                self.db.store.update_one(condition, {"$inc": {"stock_level": -1}})
+                # condition = {"store_id": store_id, "book_id": book_id, "stock_level": {'$gte': count}}
+                # self.db.store.update_one(condition, {"$inc": {"stock_level": -1}})
+                condition = {
+                    "store_id": store_id, 
+                    "book_stock_info.book_id": book_id, 
+                    "book_stock_info.stock_level": {'$gte': count}
+                }
+                self.db.store.update_one(
+                    condition, 
+                    {"$inc": {"book_stock_info.$.stock_level": -1}}
+                )
 
                 new_order_detail = {
                     "order_id": uid,
