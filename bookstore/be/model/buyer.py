@@ -70,6 +70,10 @@ class Buyer(db_conn.DBConn):
 
             self.db.new_order.insert_one(new_order)
             order_id = uid
+            res_debug = self.db.new_order.find()
+            res_list = []
+            for doc in res_debug:
+                res_list.append(doc)
 
         except Exception as e:
             logging.info("528, {}".format(str(e)))
@@ -134,18 +138,21 @@ class Buyer(db_conn.DBConn):
             )
             if result.modified_count == 0:
                 return error.error_not_sufficient_funds(order_id)
-
-            # �Ѿ�����Ļ��order������������ɾ����
-            # ɾ�������Ͷ�����ϸ��Ϣ
-            delete_count = self.db.new_order.delete_many({"order_id": order_id})
+            # delete_count = self.db.new_order.delete_many({"order_id": order_id})
             
-            if delete_count == 0:
+            # if delete_count == 0:
+            #     return error.error_invalid_order_id(order_id)
+            # delete_count = self.db.new_order_detail.delete_many({"order_id": order_id})
+            # if delete_count == 0:
+            #     return error.error_invalid_order_id(order_id)
+            result = self.db.new_order.update_one(
+                {"order_id": order_id, "books_status": 2},  
+                {"$set": {"books_status": 1}}               
+            )
+
+            if result.matched_count == 0:
                 return error.error_invalid_order_id(order_id)
             
-            delete_count = self.db.new_order_detail.delete_many({"order_id": order_id})
-            if delete_count == 0:
-                return error.error_invalid_order_id(order_id)
-
         except Exception as e:
             return 528, "{}".format(str(e))
 
@@ -163,11 +170,9 @@ class Buyer(db_conn.DBConn):
             if user_info is None:
                 return error.error_authorization_fail()
             
-            # ��֤����
             if user_info.get("password") != password:
                 return error.error_authorization_fail()
 
-            # �����û����
             res = self.db.user.update_one({"user_id": user_id}, {"$inc": {"balance": add_value}})
             if res.matched_count == 0:
                 return error.error_non_exist_user_id(user_id)
@@ -179,7 +184,7 @@ class Buyer(db_conn.DBConn):
 
         return 200, "ok"
 
-    def receive_book(self,user_id: str, order_id: str) -> (int, str):
+    def receive_books(self,user_id: str, order_id: str) -> (int, str):
         try :
             res = self.db.new_order.find_one({"order_id": order_id})
             if res == None:
@@ -189,11 +194,13 @@ class Buyer(db_conn.DBConn):
 
             if buyer_id != user_id:
                 return error.error_authorization_fail()
+            if paid_status == 1:
+                return error.error_books_not_sent(order_id)#已经付钱，但是没有发货
             if paid_status == 2:
-                return error.error_books_not_sent(order_id)
+                return error.error_books_receive_without_payment(order_id)#没有付款就receive
             if paid_status == 3:
                 return error.error_books_repeat_receive(order_id)
-            self.db.new_order.update_one({"order_id": order_id}, {"$set": {"status": 3}})
+            self.db.new_order.update_one({"order_id": order_id}, {"$set": {"books_status": 3}})
         except BaseException as e:
             return 528, "{}".format(str(e))
         return 200, "ok"

@@ -14,7 +14,7 @@ error_code = {
     522: "book in order {} has been received",
     523: "book in order {} hasn't been sent",
     524: "book in order {} has been sent repeatively",
-    525: "",
+    525: "book in order {} has been received without payment and without send", #属于数据异常
     526: "",
     527: "",
     528: "",
@@ -71,6 +71,8 @@ def error_books_not_sent(order_id):
 def error_books_repeat_receive(order_id):
     return 524, error_code[524].format(order_id)
 
+def error_books_receive_without_payment(order_id):
+    return 525, error_code[525].format(order_id)
 
 def error_authorization_fail():
     return 401, error_code[401]
