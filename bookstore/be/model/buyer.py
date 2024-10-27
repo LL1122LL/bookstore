@@ -217,6 +217,10 @@ class Buyer(db_conn.DBConn):
             res = self.db.new_order.find({"user_id": user_id})
             order_list = []
 
+            # no orders，return empty list, message to hint no orders
+            if res is None:
+                return 200, "no orders", []
+
             # find order detail
             for row in res:
                 order_id = row["order_id"]
