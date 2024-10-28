@@ -109,6 +109,10 @@ class Seller(db_conn.DBConn):
         return 200, "ok"
 
     def send_books(self,user_id: str,order_id: str):
+        # res_debug = self.db.new_order.find()
+        # res_list = []
+        # for doc in res_debug:
+        #     res_list.append(doc)
         res = self.db.new_order.find_one({"order_id": order_id})
         if res is None:
             return error.error_invalid_order_id(order_id)

@@ -110,8 +110,8 @@ class Buyer(db_conn.DBConn):
                 return error.error_authorization_fail()
 
             # 只有未付款的订单可以付款
-            if order_info["books_status"] != 2:
-                return error.error_repeated_payment(order_id)
+            # if order_info["books_status"] != 2:
+            #     return error.error_repeated_payment(order_id)
 
             usr_info = self.db.user.find_one({"user_id": buyer_id})
             if usr_info is None:
@@ -167,7 +167,11 @@ class Buyer(db_conn.DBConn):
             #     return error.error_invalid_order_id(order_id)
 
             # 更近订单状态，status code	status -1	取消 0	已发货，未收货 1	已付款,待发货 2	初始值，未付款 3	已收货
-            result = self.db.new_order.update_one({"order_id": order_id}, {"$set": {"books_status": 1}})
+            #result = self.db.new_order.update_one({"order_id": order_id}, {"$set": {"books_status": 1}})
+            result = self.db.new_order.update_one(
+                {"order_id": order_id, "books_status": 2},  
+                {"$set": {"books_status": 1}}               
+            )
             if result.matched_count == 0:
                 return error.error_invalid_order_id(order_id)
 
@@ -211,11 +215,13 @@ class Buyer(db_conn.DBConn):
 
             if buyer_id != user_id:
                 return error.error_authorization_fail()
+            if paid_status == 1:
+                return error.error_books_not_sent(order_id)#已经付钱，但是没有发货
             if paid_status == 2:
-                return error.error_books_not_sent(order_id)
+                return error.error_books_receive_without_payment(order_id)#没有付款就receive
             if paid_status == 3:
                 return error.error_books_repeat_receive(order_id)
-            self.db.new_order.update_one({"order_id": order_id}, {"$set": {"status": 3}})
+            self.db.new_order.update_one({"order_id": order_id}, {"$set": {"books_status": 3}})
         except BaseException as e:
             return 528, "{}".format(str(e))
         return 200, "ok"

@@ -50,16 +50,26 @@ class Buyer:
         return r.status_code
 
 
-    def receive_book(self, order_id: str) -> int:
-        json = {
-            "user_id": self.user_id,
-            "order_id": order_id,
+    # def receive_book(self,user_id = None,order_id = None) -> int:
+    #     if(user_id != None):
+    #         self.user_id = user_id
+    #     json = {
+    #         "user_id": self.user_id,
+    #         "order_id": order_id,
+    #     }
+    #     url = urljoin(self.url_prefix, "receive_book")
+    #     headers = {"token": self.token}
+    #     r = requests.post(url, headers=headers, json=json)
+    #     return r.status_code
+    
+    def receive_book(self, user_id: str, order_id: str) -> int:
+        json = {"user_id": user_id, 
+                "order_id": order_id
         }
         url = urljoin(self.url_prefix, "receive_book")
         headers = {"token": self.token}
         r = requests.post(url, headers=headers, json=json)
         return r.status_code
-
 
     def search_order(self) -> int:
         json = {
