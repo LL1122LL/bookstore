@@ -1,17 +1,23 @@
-import sqlite3 as sqlite
-import uuid
-import json
+import threading
+import time
+from datetime import datetime, timedelta
 import logging
+import uuid
+from pymongo import MongoClient
+
 from be.model import db_conn
 from be.model import error
 
-from pymongo import MongoClient
 
 class Buyer(db_conn.DBConn):
     def __init__(self):
         # self.client = MongoClient('localhost', 27017)
         # self.db = self.client['bookstore']
         super().__init__()
+        self.cleanup_thread = None
+        self.is_running = False
+        # 启动后台清理任务
+        self.start_cleanup_thread()
 
     def new_order(self, user_id: str, store_id: str, id_and_count: [(str, int)]) -> (int, str, str):
         order_id = ""
@@ -66,6 +72,7 @@ class Buyer(db_conn.DBConn):
                 "user_id": user_id,
                 "store_id": store_id,
                 "books_status": 2,
+                "create_time": datetime.now(),
             }
 
             self.db.new_order.insert_one(new_order)
@@ -304,3 +311,65 @@ class Buyer(db_conn.DBConn):
         except BaseException as e:
             return 528, "{}".format(str(e))
         return 200, "ok"
+
+
+    # 利用BackgroundScheduler，设置一个scheduler每分钟检查并调用auto_cancel_order，，auto_cancel_order，找到create_time 30分钟后还未付款的订单，自动取消并返还书籍
+    def auto_cancel_order(self):
+        try:
+            res = self.db.new_order.find({"books_status": 2})
+            if res is None:
+                return 200, "no orders"
+            for row in res:
+                order_id = row["order_id"]
+                create_time = row["create_time"]
+                if datetime.now() - create_time > timedelta(seconds=10): # 为了测试方便，改成10秒
+                    # cancel order的第二个参数是密码，需要user表里面查找
+                    user_id = row["user_id"]
+                    user_info = self.db.user.find_one({"user_id": user_id})
+                    password = user_info["password"]
+                    self.cancel_order(user_id, password, order_id)
+
+        except BaseException as e:
+            return 528, "{}".format(str(e))
+        return 200, "ok"
+
+    def start_cleanup_thread(self):
+        """启动后台清理线程"""
+        self.is_running = True
+        self.cleanup_thread = threading.Thread(target=self._cleanup_expired_orders, daemon=True)
+        self.cleanup_thread.start()
+        logging.info("Started order cleanup thread")
+
+    def stop_cleanup_thread(self):
+        """停止后台清理线程"""
+        self.is_running = False
+        if self.cleanup_thread:
+            self.cleanup_thread.join()
+            logging.info("Stopped order cleanup thread")
+
+    def _cleanup_expired_orders(self):
+        """清理过期订单的后台任务"""
+        while self.is_running:
+            try:
+                # 计算30分钟前的时间点
+                expire_time = datetime.now() - timedelta(seconds=30)
+
+                # 查找并删除过期订单
+                result = self.db.new_order.delete_many({
+                    "books_status": 2,
+                    "create_time": {"$lt": expire_time}
+                })
+
+                if result.deleted_count > 0:
+                    logging.info(f"Deleted {result.deleted_count} expired orders")
+
+            except Exception as e:
+                logging.error(f"Error in cleanup thread: {str(e)}")
+
+            # 每60秒检查一次
+            time.sleep(10)
+
+    def __del__(self):
+        """确保线程在对象销毁时正确关闭"""
+        self.stop_cleanup_thread()
+
