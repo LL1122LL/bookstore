@@ -80,6 +80,17 @@ new_order表：
 
 new_order_detail表：
 
+
+            each_book_in_order_details.append({
+                "book_id": book_id,
+                "count": count,
+                "price": price
+            })
+            new_order_detail = {
+                "order_id": uid,
+                "each_book_details": each_book_in_order_details
+            }
+下述为关系数据库设计
 | order_id                         | book_id | count | price |
 | -------------------------------- | ------- | ----- | ----- |
 | 主键为联合主键(order_id,book_id) |         |       |       |

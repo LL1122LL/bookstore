@@ -18,11 +18,17 @@ class Store:
         self.user_store = self.db['user_store']
         self.store = self.db['store']
         self.book = self.db['book']
-        self.order_detail = self.db['order_detail']
-        self.order = self.db['order']
+        self.new_order_detail = self.db['new_order_detail']
+        self.new_order = self.db['new_order']
 
-        # self.store.create_index([("store_id", 1)], unique=True)
-        # self.user.create_index([("user_id", 1)], unique=True)
+        self.user.create_index([("user_id", 1)], unique=True)
+        self.user_store.create_index([("store_id",1)],unique = True)
+        self.store.create_index([("store_id", 1)], unique=True)
+
+        self.new_order.create_index([("order_id", 1)], unique=True)
+        #self.new_order_detail.create_index([("order_id", 1),("book_id",1)], unique=True)
+        #self.new_order_detail.create_index([("order_id", 1)], unique=True)
+
         # self.book.create_index(
         #     [("title", "text"), ("tags", "text"), ("book_intro", "text"), ("content", "text")])
 

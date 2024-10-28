@@ -31,6 +31,7 @@ class Buyer(db_conn.DBConn):
 
             uid = "{}_{}_{}".format(user_id, store_id, str(uuid.uuid1()))
 
+            each_book_in_order_details = []
             for book_id, count in id_and_count:
                 result = self.db.store.find_one(
                     {"store_id": store_id,"book_stock_info.book_id": book_id},
@@ -59,14 +60,23 @@ class Buyer(db_conn.DBConn):
                     {"$inc": {"book_stock_info.$.stock_level": -1}}
                 )
 
-                new_order_detail = {
-                    "order_id": uid,
+                each_book_in_order_details.append({
                     "book_id": book_id,
                     "count": count,
-                    "price": price,
-                }
-                self.db.new_order_detail.insert_one(new_order_detail)
-
+                    "price": price
+                })
+                # new_order_detail = {
+                #     "order_id": uid,
+                #     "book_id": book_id,
+                #     "count": count,
+                #     "price": price,
+                # }
+                #self.db.new_order_detail.insert_one(new_order_detail)
+            new_order_detail = {
+                "order_id": uid,
+                "each_book_details": each_book_in_order_details
+            }
+            self.db.new_order_detail.insert_one(new_order_detail)
             new_order = {
                 "order_id": uid,
                 "user_id": user_id,
