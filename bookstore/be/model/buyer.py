@@ -133,10 +133,10 @@ class Buyer(db_conn.DBConn):
 
             new_order_details_info = self.db.new_order_detail.find({"order_id": order_id})
             total_price = 0
-            for row in new_order_details_info:
-                count = row["count"]
-                price = row["price"]
-                total_price = total_price + price * count
+            for order_detail in new_order_details_info:
+                for book in order_detail["each_book_details"]:
+                    # 每本书的价格 * 数量
+                    total_price += book["price"] * book["count"]
 
             if balance < total_price:
                 return error.error_not_sufficient_funds(order_id)
@@ -243,14 +243,15 @@ class Buyer(db_conn.DBConn):
                 order_id = row["order_id"]
                 store_id = row["store_id"]
                 status = row["books_status"]
-                book_list = self.db.new_order_detail.find({"order_id": order_id})
+                order_de = self.db.new_order_detail.find({"order_id": order_id})
 
                 # find book
-                for book in book_list:
-                    book_id = book["book_id"]
-                    count = book["count"]
-                    price = book["price"]
-                    order_list.append((order_id, store_id, book_id, count, price, status))
+                for order_detail in order_de:
+                    for book in order_detail["each_book_details"]:
+                        book_id = book["book_id"]
+                        count = book["count"]
+                        price = book["price"]
+                        order_list.append((order_id, store_id, book_id, count, price, status))
 
         except BaseException as e:
             return 528, "{}".format(str(e)), []
@@ -277,14 +278,15 @@ class Buyer(db_conn.DBConn):
             # check order status
             status = res["books_status"]
             store_id = res["store_id"]
-            book_list = self.db.new_order_detail.find({"order_id": order_id})
+            order_list = self.db.new_order_detail.find({"order_id": order_id})
 
             if status == 2:
                 # 返还书籍
-                for book in book_list:
-                    book_id = book["book_id"]
-                    count = book["count"]
-                    self.db.store.update_one({"store_id": store_id, "book_stock_info.book_id": book_id}, {"$inc": {"book_stock_info.$.stock_level": count}})
+                for order_detail in order_list:
+                    for book in order_detail["each_book_details"]:
+                        book_id = book["book_id"]
+                        count = book["count"]
+                        self.db.store.update_one({"store_id": store_id, "book_stock_info.book_id": book_id}, {"$inc": {"book_stock_info.$.stock_level": count}})
                 self.db.new_order.delete_one({"order_id": order_id})
                 self.db.new_order_detail.delete_many({"order_id": order_id})
 
@@ -294,18 +296,21 @@ class Buyer(db_conn.DBConn):
                 seller_id = store_info["user_id"]
                 seller_info = self.db.user.find_one({"user_id": seller_id})
                 total_price = 0
-                for book in book_list:
-                    count = book["count"]
-                    price = book["price"]
-                    total_price += count * price
+                for order_detail in order_list:
+                    for book in order_detail["each_book_details"]:
+                        price = book["price"]
+                        count = book["count"]
+                        total_price += count * price
+
                 if seller_info["balance"] < total_price:
                     return error.error_not_sufficient_funds(order_id)
 
                 # 返还书籍
-                for book in book_list:
-                    book_id = book["book_id"]
-                    count = book["count"]
-                    self.db.store.update_one({"store_id": store_id, "book_stock_info.book_id": book_id}, {"$inc": {"book_stock_info.$.stock_level": count}})
+                for order_detail in order_list:
+                    for book in order_detail["each_book_details"]:
+                        book_id = book["book_id"]
+                        count = book["count"]
+                        self.db.store.update_one({"store_id": store_id, "book_stock_info.book_id": book_id}, {"$inc": {"book_stock_info.$.stock_level": count}})
 
                 # 返还金额
                 self.db.user.update_one({"user_id": seller_id}, {"$inc": {"balance": -total_price}})
@@ -323,55 +328,34 @@ class Buyer(db_conn.DBConn):
         return 200, "ok"
 
 
-    # 利用BackgroundScheduler，设置一个scheduler每分钟检查并调用auto_cancel_order，，auto_cancel_order，找到create_time 30分钟后还未付款的订单，自动取消并返还书籍
-    def auto_cancel_order(self):
-        try:
-            res = self.db.new_order.find({"books_status": 2})
-            if res is None:
-                return 200, "no orders"
-            for row in res:
-                order_id = row["order_id"]
-                create_time = row["create_time"]
-                if datetime.now() - create_time > timedelta(seconds=10): # 为了测试方便，改成10秒
-                    # cancel order的第二个参数是密码，需要user表里面查找
-                    user_id = row["user_id"]
-                    user_info = self.db.user.find_one({"user_id": user_id})
-                    password = user_info["password"]
-                    self.cancel_order(user_id, password, order_id)
-
-        except BaseException as e:
-            return 528, "{}".format(str(e))
-        return 200, "ok"
 
     def start_cleanup_thread(self):
-        """启动后台清理线程"""
+        #启动后台清理线程
         self.is_running = True
         self.cleanup_thread = threading.Thread(target=self._cleanup_expired_orders, daemon=True)
         self.cleanup_thread.start()
         logging.info("Started order cleanup thread")
 
     def stop_cleanup_thread(self):
-        """停止后台清理线程"""
+        #停止后台清理线程
         self.is_running = False
         if self.cleanup_thread:
             self.cleanup_thread.join()
             logging.info("Stopped order cleanup thread")
 
     def _cleanup_expired_orders(self):
-        """清理过期订单的后台任务"""
+        #清理过期订单的后台任务
         while self.is_running:
             try:
                 # 计算30分钟前的时间点
-                expire_time = datetime.now() - timedelta(seconds=30)
+                expire_time = datetime.now() - timedelta(seconds=20)
 
-                # 查找并删除过期订单
-                result = self.db.new_order.delete_many({
-                    "books_status": 2,
-                    "create_time": {"$lt": expire_time}
-                })
-
-                if result.deleted_count > 0:
-                    logging.info(f"Deleted {result.deleted_count} expired orders")
+                # 先找到过期订单的order_id，再在new_order和new_order_detail中删除
+                expired_orders = self.db.new_order.find({"create_time": {"$lt": expire_time}, "books_status": 2})
+                for order in expired_orders:
+                    order_id = order["order_id"]
+                    self.db.new_order.delete_many({"order_id": order_id})
+                    self.db.new_order_detail.delete_many({"order_id": order_id})
 
             except Exception as e:
                 logging.error(f"Error in cleanup thread: {str(e)}")
@@ -380,6 +364,6 @@ class Buyer(db_conn.DBConn):
             time.sleep(10)
 
     def __del__(self):
-        """确保线程在对象销毁时正确关闭"""
+        #确保线程在对象销毁时正确关闭
         self.stop_cleanup_thread()
 
