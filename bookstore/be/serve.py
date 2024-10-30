@@ -7,7 +7,7 @@ from be.view import auth
 from be.view import seller
 from be.view import buyer
 from be.model.store import init_database, init_completed_event
-
+from be.view import search
 bp_shutdown = Blueprint("shutdown", __name__)
 
 
@@ -48,5 +48,6 @@ def be_run():
     print("auth.bp_auth",auth.bp_auth)
     app.register_blueprint(seller.bp_seller)
     app.register_blueprint(buyer.bp_buyer)
+    app.register_blueprint(search.bp_search)
     init_completed_event.set()
     app.run()

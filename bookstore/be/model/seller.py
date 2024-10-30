@@ -14,6 +14,7 @@ class Seller(db_conn.DBConn):
         book_id: str,
         book_json_str: str, # Unused
         stock_level: int,
+        #is_new = False
     ):
         try:
             if not self.user_id_exist(user_id):
@@ -47,6 +48,8 @@ class Seller(db_conn.DBConn):
                     }
                 }
             )
+            #if is_new:
+            self.db.book.insert_one(json.loads(book_json_str))
         except Exception as e:
             return 528, "{}".format(str(e))
         except BaseException as e:

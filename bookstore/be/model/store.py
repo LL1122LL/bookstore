@@ -29,8 +29,8 @@ class Store:
         #self.new_order_detail.create_index([("order_id", 1),("book_id",1)], unique=True)
         self.new_order_detail.create_index([("order_id", 1)], unique=True)
 
-        # self.book.create_index(
-        #     [("title", "text"), ("tags", "text"), ("book_intro", "text"), ("content", "text")])
+        self.book.create_index(
+            [("title", "text"), ("tags", "text"), ("book_intro", "text"), ("content", "text")])
 
     # def get_db_conn(self) -> sqlite.Connection:
     #     return sqlite.connect(self.database)

@@ -71,3 +71,18 @@ def cancel_order():
     b = Buyer()
     code, message = b.cancel_order(user_id, password, order_id)
     return jsonify({"message": message}), code
+
+
+@bp_buyer.route("/search", methods=["POST"])
+def search_books():
+    keyword = request.json.get("keyword")
+    store_id = request.json.get("store_id")
+    page = request.json.get("page")
+
+    b = Buyer()
+    code, message = b.search(keyword, store_id, page)
+    return jsonify({"message": message}), code
+
+
+
+

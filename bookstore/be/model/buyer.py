@@ -226,6 +226,27 @@ class Buyer(db_conn.DBConn):
             return 528, "{}".format(str(e))
         return 200, "ok"
 
+
+    #search book
+    def search(self, keyword, store_id=None, page=1, per_page=10):
+        try:
+            query = {"$text": {"$search": keyword}}
+            if store_id:
+                result1 = self.conn.store.find({"store_id": store_id}, {"books.book_id": 1, "_id": 0})
+                for result in result1:
+                    print(result)
+                books_id = [i["book_id"] for i in result1["books"]]
+                query["id"] = {"$in": books_id}
+
+            result = self.db.book.find(query,
+                                              {"score": {"$meta": "textScore"}, "_id": 0, "picture": 0}).sort(
+                [("score", {"$meta": "textScore"})])
+
+            result.skip((int(page) - 1) * per_page).limit(per_page)
+        except BaseException as e:
+            return 530, f"{str(e)}"
+        return 200, list(result)
+
     # 用户查询历史订单
     def search_order(self, user_id: str, password: str) -> (int, str, [(str, str, str, int, int, int)]):
         try:
