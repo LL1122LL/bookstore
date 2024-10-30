@@ -29,6 +29,7 @@ class TestSearch:
         self.rs = RequestSearch()
         book_db = book.BookDB()
         self.book_example = book_db.get_book_info(0, 1)[0]
+        
 
     def test_all_field_search(self):
         content, code = self.buyer.search(self.keyword)
@@ -41,100 +42,99 @@ class TestSearch:
         assert code == 200
 
     def test_search_title(self):
-        title = f"hello_{str(uuid.uuid1())}"
-        self.book_example.title = title
+        # title = f"hello_{str(uuid.uuid1())}"
+        # self.book_example.title = title
         code = self.seller.add_book(self.store_id, 0, self.book_example)
         assert code == 200
 
-        code = self.rs.request_search_title(title=title)
+        code = self.rs.request_search_title(title=self.book_example.title)
         assert code == 200
 
-        code = self.rs.request_search_title(title=title + "x")
+        code = self.rs.request_search_title(title=self.book_example.title + str(uuid.uuid1()))
         assert code != 200
 
     def test_search_title_in_store(self):
-        title = f"hello_{str(uuid.uuid1())}"
-        self.book_example.title = title
+        # title = f"hello_{str(uuid.uuid1())}"
+        # self.book_example.title = title
         self.seller.add_book(self.store_id, 0, self.book_example)
 
-        code = self.rs.request_search_title_in_store(title=title, store_id=self.store_id)
+        code = self.rs.request_search_title_in_store(title=self.book_example.title, store_id=self.store_id)
         assert code == 200
 
-        code = self.rs.request_search_title_in_store(title=title + "x",
+        code = self.rs.request_search_title_in_store(title=self.book_example.title + str(uuid.uuid1()),
                                                      store_id=self.store_id)
         assert code != 200
 
     def test_search_tag(self):
-        tag = f"hello_{str(uuid.uuid1())}"
-        self.book_example.tags = [tag]
-        self.seller.add_book(self.store_id, 0, self.book_example)
-
+        # tag = f"hello_{str(uuid.uuid1())}"
+        # self.book_example.tags = [tag]
+        # self.seller.add_book(self.store_id, 0, self.book_example)
+        tag = self.book_example.tags[0]
         code = self.rs.request_search_tag(tag=tag)
         assert code == 200
 
-        code = self.rs.request_search_tag(tag=tag + "x")
+        code = self.rs.request_search_tag(tag=tag +str(uuid.uuid1()))
         assert code != 200
 
     def test_search_tag_in_store(self):
-        tag = f"hello_{str(uuid.uuid1())}"
-        self.book_example.tags = [tag]
-        self.seller.add_book(self.store_id, 0, self.book_example)
-
+        # tag = f"hello_{str(uuid.uuid1())}"
+        # self.book_example.tags = [tag]
+        # self.seller.add_book(self.store_id, 0, self.book_example)
+        tag = self.book_example.tags[0]
         code = self.rs.request_search_tag_in_store(tag=tag, store_id=self.store_id)
         assert code == 200
 
-        code = self.rs.request_search_tag_in_store(tag=tag + "x", store_id=self.store_id)
+        code = self.rs.request_search_tag_in_store(tag=tag + str(uuid.uuid1()), store_id=self.store_id)
         assert code != 200
 
     def test_search_author(self):
-        author = f"hello_{str(uuid.uuid1())}"
-        self.book_example.author = author
+        # author = f"hello_{str(uuid.uuid1())}"
+        # self.book_example.author = author
+        author = self.book_example.author
         self.seller.add_book(self.store_id, 0, self.book_example)
 
         code = self.rs.request_search_author(author=author)
         assert code == 200
 
-        code = self.rs.request_search_author(author=author + "x")
+        code = self.rs.request_search_author(author=author + str(uuid.uuid1()))
         assert code != 200
 
     def test_search_author_in_store(self):
-        author = f"hello_{str(uuid.uuid1())}"
-        self.book_example.author = author
+        # author = f"hello_{str(uuid.uuid1())}"
+        # self.book_example.author = author
         self.seller.add_book(self.store_id, 0, self.book_example)
-
+        author = self.book_example.author
         code = self.rs.request_search_author_in_store(author=author, store_id=self.store_id)
         assert code == 200
 
-        code = self.rs.request_search_author_in_store(author=author + "x",
+        code = self.rs.request_search_author_in_store(author=author + str(uuid.uuid1()),
                                                       store_id=self.store_id)
         assert code != 200
 
     def test_search_content(self):
-        key = "hello11"
-        book_intro = f"{str(uuid.uuid1())} {key} {str(uuid.uuid1())}"
-        self.book_example.book_intro = book_intro
+        # key = "hello11"
+        # book_intro = f"{str(uuid.uuid1())} {key} {str(uuid.uuid1())}"
+        # self.book_example.book_intro = book_intro
         self.seller.add_book(self.store_id, 0, self.book_example)
-
+        key = self.book_example.book_intro
         code = self.rs.request_search_content(content=key)
         assert code == 200
 
-        code = self.rs.request_search_content(content=key + "x")
+        code = self.rs.request_search_content(content=key + str(uuid.uuid1()))
         assert code != 200
 
     def test_search_content_in_store(self):
-        key = "hello12"
-        book_intro = f"{str(uuid.uuid1())} {key} {str(uuid.uuid1())}"
-        self.book_example.book_intro = book_intro
+        # key = "hello12"
+        # book_intro = f"{str(uuid.uuid1())} {key} {str(uuid.uuid1())}"
+        # self.book_example.book_intro = book_intro
         self.seller.add_book(self.store_id, 0, self.book_example)
-
+        key = self.book_example.book_intro
         code = self.rs.request_search_content_in_store(content=key, store_id=self.store_id)
         assert code == 200
 
-        code = self.rs.request_search_content_in_store(content=key + "x",
+        code = self.rs.request_search_content_in_store(content=key + str(uuid.uuid1()),
                                                        store_id=self.store_id)
         assert code != 200
-
-
 
 class TestAddBook:
     def pre_run_initialization(self):
@@ -178,6 +178,6 @@ class TestAddBook:
             code = self.seller.add_book(self.store_id, 0, b)
             assert code != 200
 
-a = TestAddBook()
+a = TestSearch()
 a.pre_run_initialization()
-a.test_error_exist_book_id()
+a.test_search_tag_in_store()
