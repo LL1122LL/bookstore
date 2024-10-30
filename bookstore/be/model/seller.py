@@ -49,7 +49,7 @@ class Seller(db_conn.DBConn):
                 }
             )
             #if is_new:
-            self.db.book.insert_one(json.loads(book_json_str))
+            #self.db.book.insert_one(json.loads(book_json_str))
         except Exception as e:
             return 528, "{}".format(str(e))
         except BaseException as e:

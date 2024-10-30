@@ -180,4 +180,4 @@ class TestAddBook:
 
 a = TestAddBook()
 a.pre_run_initialization()
-a.test_ok()
+a.test_error_exist_book_id()

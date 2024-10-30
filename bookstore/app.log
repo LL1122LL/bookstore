@@ -14485,3 +14485,7 @@ INFO:werkzeug:127.0.0.1 - - [31/Oct/2024 01:39:20] "POST /auth/register HTTP/1.1
 INFO:werkzeug:127.0.0.1 - - [31/Oct/2024 01:39:20] "[31m[1mPOST /auth/password HTTP/1.1[0m" 401 -
 INFO:werkzeug:127.0.0.1 - - [31/Oct/2024 01:39:20] "[31m[1mPOST /auth/login HTTP/1.1[0m" 401 -
 INFO:werkzeug:127.0.0.1 - - [31/Oct/2024 01:39:23] "GET /shutdown HTTP/1.1" 200 -
+INFO:werkzeug: * Running on http://127.0.0.1:5000/ (Press CTRL+C to quit)
+INFO:werkzeug:127.0.0.1 - - [31/Oct/2024 01:51:49] "POST /auth/register HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [31/Oct/2024 01:51:49] "POST /auth/login HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [31/Oct/2024 01:51:49] "POST /seller/create_store HTTP/1.1" 200 -
