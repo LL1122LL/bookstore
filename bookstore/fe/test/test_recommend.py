@@ -45,8 +45,15 @@ class TestRecommendBooks:
             non_exist_book_id=False, low_stock_level=False
         )
         assert ok
-        code, _ = self.buyer.new_order(self.store_id, buy_book_id_list)
+        code, order_id = self.buyer.new_order(self.store_id, buy_book_id_list)
         assert code == 200
+
+        code = self.buyer.add_funds(99999999)
+        assert code == 200
+
+        code = self.buyer.payment(order_id)
+        assert code == 200
+
         code = self.buyer.recommend_books()
         assert code == 200
 

@@ -48,7 +48,7 @@
 
 ## 文档数据库的设计
 
-
+由于MongoDB并非传统的关系型数据库，所以这里我们没有采用E-R图来描述。
 
 **文档集合描述：**
 
@@ -745,7 +745,110 @@ return 200, "ok"
 ```
 到这里我们实现了自动取消超时订单的功能。不过这个功能的实现其实由很多可以探讨的地方，我们在这里的实现可能是不够高效的，难以满足实际生产环境的。在未来，我们可以考虑利用数据库的TTL（Time-To-Live）索引，或者是采用更高级的后台任务API和调度工具，例如`apischeduler`等。这个问题需要考虑高并发场景下的性能问题，以及如何保证任务的可靠性和一致性等，有待我们未来进一步探索。
 
+## 书籍推荐
+由于本次实验中我们实现了用户历史订单查询和图书搜索两个功能，因此一个自然的想法是能否把这两个功能结合起来做一些事情，我们据此设计了一个简易的“猜你想看”：
+```python
+    def recommend_books(self, user_id: str, password: str):
+```
+`recommend_books`函数用于为买家推荐书籍，参数`user_id`为买家的id，`password`为密码。函数返回状态码，消息和推荐的书的列表。
+按惯例检查用户id和密码，不再赘述：
+```python
+            # find user
+            user_info = self.db.user.find_one({"user_id": user_id})
+            if user_info is None:
+                return error.error_authorization_fail() + ([])
+            if user_info.get("password") != password:
+                return error.error_authorization_fail() + ([])
+```
+接着调用我们之前实现的历史订单查询函数，找到用户的所有订单。注意函数返回的前面两个元素是返回码和消息，最后才是订单列表。
+```python
+            # find order
+            order_list =self.search_order(user_id, password)[2]
+```
+由于我们的简易推荐基于用户的历史订单，如果用户没有历史订单的话，我们也就没法推荐了
+```python
+            # 没有先前订单无法推荐
+            if not order_list:
+                return 200, "no orders", []
+```
+接下来我们要使用我们编写的图书搜索功能，创建一个实例
+```python
+            # 初始化一个booksearcher
+            book_searcher = BookSearcher()
+```
+然后我们遍历用户的所有订单，找到每个订单的书本id，在数据库中找到这本书的信息，我们关系的是标题，作者和标签的列表（用换行符分割为列表）。（注意根据我们之前的搜索订单的返回值，列表的第三个元素是书本id）
+```python
+            # 在order_list中提取book_id，根据book_id，从self.db.book中搜索相应的书的标题，作者和标签
+            book_list = []
+            for order in order_list:
+                book_id = order[2]
+                book_info = self.db.book.find_one({"id":book_id})
+                book_list.append((book_id, book_info["title"], book_info["author"], book_info["tags"].split("\n")))
+```
+一般来说，我们不会想给用户推荐他已经看过的书，但对这个数据库来说，精确实现这一点可能比较麻烦，所以简单来说我们维护一个用户买过的书的标题的集合，不推荐相同标题的书
+```python
+            # 维护一个title的集合，因为不能推荐用户买过的书
+            title_set = set()
+            author = {}
+            tags = []
+```
+接着我们遍历用户买过的书，统计有哪些作者，各买了多少本，并合并所有标签的列表
+```python
+            for book in book_list:
+                title_set.add(book[1])
 
+                # 找到用户读过最多的作者
+                if book[2] not in author:
+                    author[book[2]] = 1
+                else:
+                    author[book[2]] += 1
+
+                # 合并所有tags列表，找到用户读过最多的标签
+                tags += book[3]
+```
+找到用户看过最多的作者，类似的找到看过最多的标签
+```python
+            max_author = max(author, key=author.get)
+
+            # 找到最多的标签
+            tag = {}
+            for t in tags:
+                if t not in tag:
+                    tag[t] = 1
+                else:
+                    tag[t] += 1
+
+            max_tag = max(tag, key=tag.get)
+```
+在未来我们可以进一步拓展数量，不过在这里简单起见我们只是推荐看过最多的作者和最多的标签。然后用book_searcher中我们实现的方法检索
+```python
+            # 根据这些信息，调用book_searcher的search_author, search_tag方法，分别搜索
+            author_books = book_searcher.search_author(max_author, 1, 1)
+            tag_books = book_searcher.search_tag(max_tag, 1, 1)
+```
+对于每一个搜索结果我们都需要首先判断是否非空，如果有结果的话，检查里面每一本书的标题，如果不在用户买过的里面就加入推荐书籍列表
+```python
+            # 合并两个搜索结果，去掉用户买过的书
+            recommend_books = []
+            # 先判断搜出来的是不是空的
+            if author_books[2]:
+                for book in author_books[2]:
+                    if book["title"] not in title_set:
+                        recommend_books.append(book)
+
+            if tag_books[2]:
+                for book in tag_books[2]:
+                    if book["title"] not in title_set:
+                        recommend_books.append(book)
+```
+保险起见，我们最后再给推荐列表做一个去重：
+```python
+            # recommend_books转化为集合防止重复
+            recommend_books = list(set(recommend_books))
+```
+有一种很特殊的情况，虽然不怎么可能发生，就是两个搜索的结果都为空，最后的推荐列表也为空，不过这个情况并不影响我们程序的正确性。
+
+到这里我们就完成了简易的推荐功能。在实际生产环境中，我们需要更复杂的推荐算法，例如协同过滤，基于内容的推荐，深度学习等。这些算法需要更多的数据，更多的计算资源，更多的调优，有待我们未来进一步探索。不过在这里我们成功用我们先前实现的功能组合成了一个新的实用模块，也是一个有趣的尝试。
 ## 新增接口
 
 **前端接口fe/access**：
@@ -798,7 +901,12 @@ return 200, "ok"
 - `test_normal_cancel` 这次我们只等待5s就主动取消，应该正常取消，因为还没有超时
 - `test_cancel_after_pay` 这里是下单后支付，然后等待30s再主动取消，应当正确，因为不会自动取消已经支付的订单
 
-
+### `TestRecommendBooks`
+这个测试用例用于测试推荐书籍功能，包含
+- `test_recommend_no_order` 检查用户没有订单时，是否按我们规定正常返回
+- `test_recommend_authorization_error` 检查用户密码错误
+- `test_recommend_non_exist_user_id` 检查用户id不存在
+- `test_recommend_ok` 检查正常情况
 
 ## 测试结果
 

@@ -109,9 +109,9 @@ class Buyer(db_conn.DBConn):
             if buyer_id != user_id:
                 return error.error_authorization_fail()
 
-            # 只有未付款的订单可以付款
-            # if order_info["books_status"] != 2:
-            #     return error.error_repeated_payment(order_id)
+            #只有未付款的订单可以付款
+            if order_info["books_status"] != 2:
+                return error.error_repeated_payment(order_id)
 
             usr_info = self.db.user.find_one({"user_id": buyer_id})
             if usr_info is None:
@@ -458,9 +458,9 @@ class Buyer(db_conn.DBConn):
             max_tag = max(tag, key=tag.get)
 
 
-            # 根据这些信息，调用book_searcher的search_author, search_tag方法，分别搜索10本书
-            author_books = book_searcher.search_author(max_author, 1, 10)
-            tag_books = book_searcher.search_tag(max_tag, 1, 10)
+            # 根据这些信息，调用book_searcher的search_author, search_tag方法，分别搜索1本书
+            author_books = book_searcher.search_author(max_author, 1, 1)
+            tag_books = book_searcher.search_tag(max_tag, 1, 1)
 
 
             # 合并两个搜索结果，去掉用户买过的书
