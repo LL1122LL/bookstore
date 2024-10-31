@@ -51,7 +51,7 @@ class TestReceive:
         code = self.seller.send_books(self.seller_id, self.order_id)
         assert code == 200
 
-    # È¨ÏŞ´íÎó seller_id Óë user_id ²»¶ÔÓ¦
+    # æƒé™é”™è¯¯ seller_id ä¸ user_id ä¸å¯¹åº”
     def test_authorization_error_send(self):
         code = self.buyer.payment(self.order_id)
         assert code == 200
@@ -59,7 +59,7 @@ class TestReceive:
         code = self.seller.send_books(self.seller_id + 'x', self.order_id)
         assert code != 200
 
-    # ¶©µ¥ºÅ²»´æÔÚ
+    # è®¢å•å·ä¸å­˜åœ¨
     def test_invalid_order_id_send(self):
         code = self.buyer.payment(self.order_id)
         assert code == 200
@@ -76,7 +76,7 @@ class TestReceive:
         code = self.seller.send_books(self.seller_id, self.order_id)
         assert code != 200
 
-        # ¶©µ¥·¢»õ£¬µ«ÊÇÎ´¸¶¿î
+        # è®¢å•å‘è´§ï¼Œä½†æ˜¯æœªä»˜æ¬¾
     def test_books_not_paid_receive(self):
         # code = self.buyer.payment(self.order_id)
         # assert code == 200
@@ -93,7 +93,7 @@ class TestReceive:
         code = self.buyer.receive_book(self.buyer_id, self.order_id)
         assert code == 200
 
-    # È¨ÏŞ´íÎó buyer_id Óë user_id ²»¶ÔÓ¦
+    # æƒé™é”™è¯¯ buyer_id ä¸ user_id ä¸å¯¹åº”
     def test_authorization_error_receive(self):
         code = self.buyer.payment(self.order_id)
         assert code == 200
@@ -103,7 +103,7 @@ class TestReceive:
         code = self.buyer.receive_book(self.buyer_id + 'x', self.order_id)
         assert code != 200
 
-    # ¶©µ¥ºÅ²»´æÔÚ
+    # è®¢å•å·ä¸å­˜åœ¨
     def test_invalid_order_id_receive(self):
         code = self.buyer.payment(self.order_id)
         assert code == 200
@@ -113,7 +113,7 @@ class TestReceive:
         code = self.buyer.receive_book(self.buyer_id, self.order_id + 'x')
         assert code != 200
 
-    # ¶©µ¥Î´·¢»õ
+    # è®¢å•æœªå‘è´§
     def test_books_not_send_receive(self):
         code = self.buyer.payment(self.order_id)
         assert code == 200
@@ -121,7 +121,7 @@ class TestReceive:
         code = self.buyer.receive_book(self.buyer_id, self.order_id)
         assert code != 200
 
-    #¶©µ¥ÖØ¸´½ÓÊÕ
+    #è®¢å•é‡å¤æ¥æ”¶
     def test_books_repeat_receive(self):
         code = self.buyer.payment(self.order_id)
         assert code == 200

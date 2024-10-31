@@ -108,7 +108,7 @@ class TestSearch:
 
         code = self.rs.search_content(content= "nonexistent_keyword_" + str(uuid.uuid4()))
         assert code != 200
-    #ÓÉÓÚ MongoDB µÄÎÄ±¾ËÑË÷»ùÓÚÆ¥Åä¹Ø¼ü´ÊµÄ´æÔÚĞÔ
+    #ç”±äº MongoDB çš„æ–‡æœ¬æœç´¢åŸºäºåŒ¹é…å…³é”®è¯çš„å­˜åœ¨æ€§
     def test_search_content_in_store(self):
 
         self.seller.add_book(self.store_id, 0, self.book_example)
