@@ -460,10 +460,63 @@ Buyer类继承了DBConn类来进行数据库操作，下面我们介绍其中的
                 return error.error_non_exist_user_id(user_id)
 ```
 
-
-
-
-
+### 卖家功能
+卖家功能的后端逻辑实现在 `bookstore/be/model/seller.py` 中，它提供了 `Seller` 类。
+```python
+class Seller(db_conn.DBConn):
+    def __init__(self):
+        db_conn.DBConn.__init__(self)
+```
+其继承了 `DBConn` 类来进行数据库操作，下面是其基础功能方法。
+#### 添加图书
+```python
+def add_book(
+    self,
+    user_id: str,       # 用户 id
+    store_id: str,      # 店铺 id
+    book_id: str,       # 书本 id
+    book_json_str: str, # 书本详细信息（JSON 字符串）
+    stock_level: int,   # 书本的库存水平
+) -> (int, str):        # 返回一个整数状态码和信息
+```
+函数的具体实现步骤如下：
+1. 判断用户是否存在，若不存在返回错误；
+2. 判断店铺是否存在，若不存在返回错误；
+3. 判断书本是否存在，若不存在返回错误；
+4. 将相应的信息插入到数据库中；
+5. 若在插入过程中发生异常，返回错误码 528/530 和错误信息；
+6. 若运行正常，返回 200 "ok"。
+#### 添加库存
+```python
+def add_stock_level(
+    self, 
+    user_id: str,        # 用户 id
+    store_id: str,       # 店铺 id
+    book_id: str,        # 书本 id
+    add_stock_level: int # 要添加的库存数
+) -> (int, str):         # 返回一个整数状态码和信息
+```
+函数的具体实现步骤如下：
+1. 判断用户是否存在，若不存在返回错误；
+2. 判断店铺是否存在，若不存在返回错误；
+3. 判断书本是否存在，若不存在返回错误；
+4. 将相应的信息插入到数据库中，并检查；
+5. 若在插入或检查过程中发生异常，返回错误码 528/530 和错误信息；
+6. 若运行正常，返回 200 "ok"。
+#### 添加店铺
+```python
+def create_store(
+    self,
+    user_id: str, # 用户 id 
+    store_id: str # 店铺 id
+) -> (int, str):  # 返回一个整数状态码和信息
+```
+函数的具体实现步骤如下：
+1. 判断用户是否存在，若不存在返回错误；
+2. 判断店铺是否存在，若不存在返回错误；
+3. 将相应的信息插入到 `store` 和 `user_store` 数据库中；
+4. 若在插入过程中发生异常，返回错误码 528/530 和错误信息；
+5. 若运行正常，返回 `200 "ok"`。
 
 ## 拓展功能的实现
 
@@ -561,7 +614,88 @@ return 200, "ok"
 
 ```
 
+### 图书查询
+查询的代码在 `/be/model/book_searcher.py` 中
+#### 查询给定标题的图书 
+```python
+def search_title_in_store(
+	self,
+	title: str,        # 要搜索的标题
+	store_id: str,     # 店铺的 id
+	page_num: int,     # 页数（分页查询）
+	page_size: int     # 页大小（分页查询）
+): -> (int, str, list) # 返回状态码、消息和查询的列表
+```
+该函数实现在店铺里查找给定标题的图书，操作如下
+1. 设置搜索条件，查询，并按要求整理；
+2. 按店铺进行筛选；
+3. 若搜索结果为空，返回错误，否则返回 `200 "ok"`。
 
+若不指定店铺，直接将 `store_id` 置为空串。
+```python
+def search_title(self, title: str, page_num: int, page_size: int):
+	return self.search_title_in_store(title, "", page_num, page_size)
+```
+#### 查询给定标签的图书
+```python
+def search_tag_in_store(
+	self,
+	tag: str,          # 要搜索的标签
+	store_id: str,     # 店铺的 id
+	page_num: int,     # 页数（分页查询）
+	page_size: int     # 页大小（分页查询）
+): -> (int, str, list) # 返回状态码、消息和查询的列表
+```
+该函数实现在店铺里查找给定标题的图书，操作如下
+1. 设置搜索条件，查询，并按要求整理；
+2. 按店铺进行筛选；
+3. 若搜索结果为空，返回错误，否则返回 `200 "ok"`。
+
+若不指定店铺，直接将 `store_id` 置为空串。
+```python
+def search_tag(self, tag: str, page_num: int, page_size: int):
+	return self.search_tag_in_store(tag, "", page_num, page_size)
+```
+#### 查询给定内容的图书
+```python
+def search_content_in_store(
+	self,
+	content: str,      # 要搜索的内容
+	store_id: str,     # 店铺的 id
+	page_num: int,     # 页数（分页查询）
+	page_size: int     # 页大小（分页查询）
+): -> (int, str, list) # 返回状态码、消息和查询的列表
+```
+该函数实现在店铺里查找给定标题的图书，操作如下
+1. 设置搜索条件，查询，并按要求整理；
+2. 按店铺进行筛选；
+3. 若搜索结果为空，返回错误，否则返回 `200 "ok"`。
+
+若不指定店铺，直接将 `store_id` 置为空串。
+```python
+def search_content(self, content: str, page_num: int, page_size: int):
+	return self.search_content_in_store(content, "", page_num, page_size)
+```
+#### 查询给定作者的图书
+```python
+def search_author_in_store(
+	self,
+	author: str,       # 要搜索的作者
+	store_id: str,     # 店铺的 id
+	page_num: int,     # 页数（分页查询）
+	page_size: int     # 页大小（分页查询）
+): -> (int, str, list) # 返回状态码、消息和查询的列表
+```
+该函数实现在店铺里查找给定标题的图书，操作如下
+1. 设置搜索条件，查询，并按要求整理；
+2. 按店铺进行筛选；
+3. 若搜索结果为空，返回错误，否则返回 `200 "ok"`。
+
+若不指定店铺，直接将 `store_id` 置为空串。
+```python
+def search_author(self, author: str, page_num: int, page_size: int):
+	return self.search_content_in_store(author, "", page_num, page_size)
+```
 
 ## 历史订单查询
 ```python
@@ -907,6 +1041,56 @@ return 200, "ok"
 - `test_recommend_authorization_error` 检查用户密码错误
 - `test_recommend_non_exist_user_id` 检查用户id不存在
 - `test_recommend_ok` 检查正常情况
+
+### `TestSearch`
+这个测试用例用于测试查找功能。初始化后可调用以下方法进行测试：
+- `test_all_field_search` 测试全局搜索功能是否正常：
+  1. 调用 `buyer.search` 查询；
+  2. 解析查询结果并输出；
+  3. 检查返回码，若为 200 则通过。
+- `test_pagination` 测试分页功能是否正常：
+  1. 调用 `buyer.search` 查询时指定页的大小；
+  2. 检查返回码，若为 200 则通过。
+- `test_search_title` 测试查找标题功能是否正常：
+  1. 调用 `seller.add_book` 插入一个图书，然后查询该图书；
+  2. 检查返回码，若为 200 则通过；
+  3. 查询一个标题不存在的图书；
+  4. 检查返回码，若不为 200 则通过（一定是 501）。
+- `test_test_search_title_in_store` 测试按店铺查找标题功能是否正常：
+  1. 调用 `seller.add_book` 插入一个图书，然后查询该图书；
+  2. 检查返回码，若为 200 则通过；
+  3. 查询一个标题不存在的图书；
+  4. 检查返回码，若不为 200 则通过（一定是 501）。
+- `test_search_tag` 测试查找标签功能是否正常：
+  1. 调用 `seller.add_book` 插入一个图书，然后查询该图书；
+  2. 检查返回码，若为 200 则通过；
+  3. 查询一个标签不存在的图书；
+  4. 检查返回码，若不为 200 则通过（一定是 501）。
+- `test_search_tag_in_store` 测试按店铺查找标签功能是否正常：
+  1. 调用 `seller.add_book` 插入一个图书，然后查询该图书；
+  2. 检查返回码，若为 200 则通过；
+  3. 查询一个标签不存在的图书；
+  4. 检查返回码，若不为 200 则通过（一定是 501）。
+- `test_search_author` 测试查找作者功能是否正常
+  1. 调用 `seller.add_book` 插入一个图书，然后查询该图书；
+  2. 检查返回码，若为 200 则通过；
+  3. 查询一个作者不存在的图书；
+  4. 检查返回码，若不为 200 则通过（一定是 501）。
+- `test_search_author_in_store` 测试按店铺查找作者功能是否正常：
+  1. 调用 `seller.add_book` 插入一个图书，然后查询该图书；
+  2. 检查返回码，若为 200 则通过；
+  3. 查询一个作者不存在的图书；
+  4. 检查返回码，若不为 200 则通过（一定是 501）。
+- `test_search_context` 测试查找目录功能是否正常：
+  1. 调用 `seller.add_book` 插入一个图书，然后查询该图书；
+  2. 检查返回码，若为 200 则通过；
+  3. 查询一个内容不存在的图书；
+  4. 检查返回码，若不为 200 则通过（一定是 501）。
+- `test_search_context_in_store` 测试按店铺查找目录功能是否正常：
+  1. 调用 `seller.add_book` 插入一个图书，然后查询该图书；
+  2. 检查返回码，若为 200 则通过；
+  3. 查询一个内容不存在的图书；
+  4. 检查返回码，若不为 200 则通过（一定是 501）。
 
 ## 测试结果
 
