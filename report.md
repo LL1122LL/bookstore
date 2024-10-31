@@ -848,12 +848,12 @@ return 200, "ok"
 #### 查询给定标题的图书 
 ```python
 def search_title_in_store(
-	self,
-	title: str,        # 要搜索的标题
-	store_id: str,     # 店铺的 id
-	page_num: int,     # 页数（分页查询）
-	page_size: int     # 页大小（分页查询）
-): -> (int, str, list) # 返回状态码、消息和查询的列表
+    self,
+    title: str,        # 要搜索的标题
+    store_id: str,     # 店铺的 id
+    page_num: int,     # 页数（分页查询）
+    page_size: int     # 页大小（分页查询）
+) -> (int, str, list): # 返回状态码、消息和查询的列表
 ```
 该函数实现在店铺里查找给定标题的图书，操作如下
 1. 设置搜索条件，查询，并按要求整理；
@@ -863,17 +863,17 @@ def search_title_in_store(
 若不指定店铺，直接将 `store_id` 置为空串。
 ```python
 def search_title(self, title: str, page_num: int, page_size: int):
-	return self.search_title_in_store(title, "", page_num, page_size)
+    return self.search_title_in_store(title, "", page_num, page_size)
 ```
 #### 查询给定标签的图书
 ```python
 def search_tag_in_store(
-	self,
-	tag: str,          # 要搜索的标签
-	store_id: str,     # 店铺的 id
-	page_num: int,     # 页数（分页查询）
-	page_size: int     # 页大小（分页查询）
-): -> (int, str, list) # 返回状态码、消息和查询的列表
+    self,
+    tag: str,          # 要搜索的标签
+    store_id: str,     # 店铺的 id
+    page_num: int,     # 页数（分页查询）
+    page_size: int     # 页大小（分页查询）
+) -> (int, str, list): # 返回状态码、消息和查询的列表
 ```
 该函数实现在店铺里查找给定标题的图书，操作如下
 1. 设置搜索条件，查询，并按要求整理；
@@ -883,17 +883,17 @@ def search_tag_in_store(
 若不指定店铺，直接将 `store_id` 置为空串。
 ```python
 def search_tag(self, tag: str, page_num: int, page_size: int):
-	return self.search_tag_in_store(tag, "", page_num, page_size)
+    return self.search_tag_in_store(tag, "", page_num, page_size)
 ```
 #### 查询给定内容的图书
 ```python
 def search_content_in_store(
-	self,
-	content: str,      # 要搜索的内容
-	store_id: str,     # 店铺的 id
-	page_num: int,     # 页数（分页查询）
-	page_size: int     # 页大小（分页查询）
-): -> (int, str, list) # 返回状态码、消息和查询的列表
+    self,
+    content: str,      # 要搜索的内容
+    store_id: str,     # 店铺的 id
+    page_num: int,     # 页数（分页查询）
+    page_size: int     # 页大小（分页查询）
+) -> (int, str, list): # 返回状态码、消息和查询的列表
 ```
 该函数实现在店铺里查找给定标题的图书，操作如下
 1. 设置搜索条件，查询，并按要求整理；
@@ -903,17 +903,17 @@ def search_content_in_store(
 若不指定店铺，直接将 `store_id` 置为空串。
 ```python
 def search_content(self, content: str, page_num: int, page_size: int):
-	return self.search_content_in_store(content, "", page_num, page_size)
+    return self.search_content_in_store(content, "", page_num, page_size)
 ```
 #### 查询给定作者的图书
 ```python
 def search_author_in_store(
-	self,
-	author: str,       # 要搜索的作者
-	store_id: str,     # 店铺的 id
-	page_num: int,     # 页数（分页查询）
-	page_size: int     # 页大小（分页查询）
-): -> (int, str, list) # 返回状态码、消息和查询的列表
+    self,
+    author: str,       # 要搜索的作者
+    store_id: str,     # 店铺的 id
+    page_num: int,     # 页数（分页查询）
+    page_size: int     # 页大小（分页查询）
+) -> (int, str, list): # 返回状态码、消息和查询的列表
 ```
 该函数实现在店铺里查找给定标题的图书，操作如下
 1. 设置搜索条件，查询，并按要求整理；
@@ -923,7 +923,7 @@ def search_author_in_store(
 若不指定店铺，直接将 `store_id` 置为空串。
 ```python
 def search_author(self, author: str, page_num: int, page_size: int):
-	return self.search_content_in_store(author, "", page_num, page_size)
+    return self.search_content_in_store(author, "", page_num, page_size)
 ```
 
 ### 书籍推荐
