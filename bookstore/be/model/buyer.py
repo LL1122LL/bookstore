@@ -6,6 +6,7 @@ import uuid
 
 from be.model import db_conn
 from be.model import error
+from be.model.book_searcher import  BookSearcher
 
 
 class Buyer(db_conn.DBConn):
@@ -397,6 +398,91 @@ class Buyer(db_conn.DBConn):
 
             # 每60秒检查一次
             time.sleep(10)
+
+    # 根据用户历史订单和书籍搜索功能来推荐书籍
+    def recommend_books(self, user_id: str, password: str):
+        try:
+            # find user
+            user_info = self.db.user.find_one({"user_id": user_id})
+            if user_info is None:
+                return error.error_authorization_fail() + ([])
+            if user_info.get("password") != password:
+                return error.error_authorization_fail() + ([])
+
+            # find order
+            order_list =self.search_order(user_id, password)[2]
+
+            # 没有先前订单无法推荐
+            if not order_list:
+                return 200, "no orders", []
+
+            # 初始化一个booksearcher
+            book_searcher = BookSearcher()
+
+            # 在order_list中提取book_id，根据book_id，从self.db.book中搜索相应的书的标题，作者和标签
+            book_list = []
+            for order in order_list:
+                book_id = order[2]
+                book_info = self.db.book.find_one({"id":book_id})
+                book_list.append((book_id, book_info["title"], book_info["author"], book_info["tags"].split("\n")))
+
+
+            # 维护一个title的集合，因为不能推荐用户买过的书
+            title_set = set()
+            author = {}
+            tags = []
+
+            for book in book_list:
+                title_set.add(book[1])
+
+                # 找到用户读过最多的作者
+                if book[2] not in author:
+                    author[book[2]] = 1
+                else:
+                    author[book[2]] += 1
+
+                # 合并所有tags列表，找到用户读过最多的标签
+                tags += book[3]
+
+
+            max_author = max(author, key=author.get)
+
+            # 找到最多的标签
+            tag = {}
+            for t in tags:
+                if t not in tag:
+                    tag[t] = 1
+                else:
+                    tag[t] += 1
+
+            max_tag = max(tag, key=tag.get)
+
+
+            # 根据这些信息，调用book_searcher的search_author, search_tag方法，分别搜索10本书
+            author_books = book_searcher.search_author(max_author, 1, 10)
+            tag_books = book_searcher.search_tag(max_tag, 1, 10)
+
+
+            # 合并两个搜索结果，去掉用户买过的书
+            recommend_books = []
+            # 先判断搜出来的是不是空的
+            if author_books[2]:
+                for book in author_books[2]:
+                    if book["title"] not in title_set:
+                        recommend_books.append(book)
+
+            if tag_books[2]:
+                for book in tag_books[2]:
+                    if book["title"] not in title_set:
+                        recommend_books.append(book)
+
+            # recommend_books转化为集合防止重复
+            recommend_books = list(set(recommend_books))
+
+            return 200, "ok", recommend_books
+
+        except BaseException as e:
+            return 528, "{}".format(str(e)), []
 
     def __del__(self):
         #确保线程在对象销毁时正确关闭

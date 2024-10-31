@@ -83,6 +83,12 @@ def search_books():
     code, message = b.search(keyword, store_id, page)
     return jsonify({"message": message}), code
 
-
+@bp_buyer.route("/recommend_books", methods=["POST"])
+def recommend_books():
+    user_id = request.json.get("user_id")
+    password = request.json.get("password")
+    b = Buyer()
+    code, message, books = b.recommend_books(user_id, password)
+    return jsonify({"message": message, "books": books}), code
 
 

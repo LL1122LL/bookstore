@@ -105,3 +105,14 @@ class Buyer:
         url = urljoin(self.url_prefix, "search")
         r = requests.post(url, json=json)
         return r.content, r.status_code
+
+
+    def recommend_books(self) -> int:
+        json = {
+            "user_id": self.user_id,
+            "password": self.password,
+        }
+        url = urljoin(self.url_prefix, "recommend_books")
+        headers = {"token": self.token}
+        r = requests.post(url, headers=headers, json=json)
+        return r.status_code
