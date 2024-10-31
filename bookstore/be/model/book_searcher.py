@@ -9,18 +9,18 @@ class BookSearcher(db_conn.DBConn):
         book_collection = self.db.book
         store_collection = self.db.store
 
-        # ²éÑ¯Ö¸¶¨±êÌâµÄÊé¼®
+        # æŸ¥è¯¢æŒ‡å®šæ ‡é¢˜çš„ä¹¦ç±
         condition = {"title": title}
         books = list(book_collection.find(condition, {"_id": 0}).skip((page_num - 1) * page_size).limit(page_size))
 
-        # ÈôÖ¸¶¨ÉÌµê£¬Ôò¹ýÂË½öÔÚ¸ÃÉÌµêÓÐ¿â´æµÄÊé¼®
+        # è‹¥æŒ‡å®šå•†åº—ï¼Œåˆ™è¿‡æ»¤ä»…åœ¨è¯¥å•†åº—æœ‰åº“å­˜çš„ä¹¦ç±
         if store_id:
             books = [
                 book for book in books 
                 if store_collection.count_documents({"store_id": store_id, "book_stock_info.book_id": book.get('id')}) > 0
             ]
 
-        # ·µ»Ø½á¹û
+        # è¿”å›žç»“æžœ
         if not books:
             return 501, f"for title:{title}, book not exist", []
         return 200, "ok", books
@@ -32,7 +32,7 @@ class BookSearcher(db_conn.DBConn):
         condition = {"tags": {"$regex": tag}}
         books = list(self.db.book.find(condition, {"_id": 0}).skip((page_num - 1) * page_size).limit(page_size))
 
-        # Èç¹ûÖ¸¶¨ÉÌµêID£¬Ôò¹ýÂË³öÔÚ¸ÃÉÌµêÖÐÓÐ¿â´æµÄÊé¼®
+        # å¦‚æžœæŒ‡å®šå•†åº—IDï¼Œåˆ™è¿‡æ»¤å‡ºåœ¨è¯¥å•†åº—ä¸­æœ‰åº“å­˜çš„ä¹¦ç±
         if store_id:
             store_collection = self.db.store
             books = [
@@ -40,7 +40,7 @@ class BookSearcher(db_conn.DBConn):
                 if store_collection.count_documents({"store_id": store_id, "book_stock_info.book_id": book.get('id')}) > 0
             ]
 
-        # ·µ»Ø½á¹û
+        # è¿”å›žç»“æžœ
         if not books:
             return 501, f"for tag:{tag},book not exist", []
         return 200, "ok", books
@@ -49,11 +49,11 @@ class BookSearcher(db_conn.DBConn):
         return self.search_tag_in_store(tag, "", page_num, page_size)
 
     def search_content_in_store(self, content: str, store_id: str, page_num: int, page_size: int):
-        # Ê¹ÓÃÈ«ÎÄ¼ìË÷Ìõ¼þ²éÕÒÊé¼®
+        # ä½¿ç”¨å…¨æ–‡æ£€ç´¢æ¡ä»¶æŸ¥æ‰¾ä¹¦ç±
         condition = {"$text": {"$search": content}}
         books = list(self.db.book.find(condition, {"_id": 0}).skip((page_num - 1) * page_size).limit(page_size))
 
-        # Èç¹ûÖ¸¶¨ÉÌµêID£¬Ôò¹ýÂË³öÔÚ¸ÃÉÌµêÖÐÓÐ¿â´æµÄÊé¼®
+        # å¦‚æžœæŒ‡å®šå•†åº—IDï¼Œåˆ™è¿‡æ»¤å‡ºåœ¨è¯¥å•†åº—ä¸­æœ‰åº“å­˜çš„ä¹¦ç±
         if store_id:
             store_collection = self.db.store
             books = [
@@ -61,7 +61,7 @@ class BookSearcher(db_conn.DBConn):
                 if store_collection.count_documents({"store_id": store_id, "book_stock_info.book_id": book.get('id')}) > 0
             ]
 
-        # ·µ»Ø½á¹û
+        # è¿”å›žç»“æžœ
         if not books:
             return 501, f"for content:{content},book not exist", []
         return 200, "ok", books
@@ -70,7 +70,7 @@ class BookSearcher(db_conn.DBConn):
         return self.search_content_in_store(content, "", page_num, page_size)
 
     def search_author_in_store(self, author: str, store_id: str, page_num: int, page_size: int):
-        # ²éÑ¯Ö¸¶¨×÷ÕßµÄÊé¼®
+        # æŸ¥è¯¢æŒ‡å®šä½œè€…çš„ä¹¦ç±
         condition = {"author": author}
         books = list(
             self.db.book.find(condition, {"_id": 0})
@@ -78,7 +78,7 @@ class BookSearcher(db_conn.DBConn):
             .limit(page_size)
         )
 
-        # Èç¹ûÖ¸¶¨ÁËÉÌµêID£¬Ôò¹ýÂËÔÚ¸ÃÉÌµêÓÐ¿â´æµÄÊé¼®
+        # å¦‚æžœæŒ‡å®šäº†å•†åº—IDï¼Œåˆ™è¿‡æ»¤åœ¨è¯¥å•†åº—æœ‰åº“å­˜çš„ä¹¦ç±
         if store_id:
             store_collection = self.db.store
             books = [
@@ -86,7 +86,7 @@ class BookSearcher(db_conn.DBConn):
                 if store_collection.count_documents({"store_id": store_id, "book_stock_info.book_id": book.get('id')}) > 0
             ]
 
-        # ·µ»Ø½á¹û
+        # è¿”å›žç»“æžœ
         if not books:
             return 501, f"for author:{author}, book not exist", []
         return 200, "ok", books
