@@ -15,7 +15,7 @@ error_code = {
     523: "book in order {} hasn't been sent",
     524: "book in order {} has been sent repeatively",
     525: "repeated payment of order {}",
-    526: "book not exist",
+    526: "book in order {} has been received without payment",
     527: "",
     528: "",
 }
@@ -73,6 +73,9 @@ def error_books_repeat_receive(order_id):
 
 def error_repeated_payment(order_id):
     return 525, error_code[525].format(order_id)
+
+def error_books_receive_without_payment(order_id):
+    return 526, error_code[526].format(order_id)
 
 def error_authorization_fail():
     return 401, error_code[401]

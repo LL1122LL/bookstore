@@ -3,7 +3,6 @@ import time
 from datetime import datetime, timedelta
 import logging
 import uuid
-from pymongo import MongoClient
 
 from be.model import db_conn
 from be.model import error
