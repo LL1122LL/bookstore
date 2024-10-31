@@ -1,4 +1,4 @@
-
+# CDMS, Project 1: Bookstore
 
 ## 实验的功能和要求
 
@@ -44,7 +44,54 @@
 
  5.不需要实现界面，只需通过代码测试体现功能与正确性
 
+## 实验前准备
+在正式开始实验之前，我们需要将`fe/data/book.db`提供的书籍的SQLite数据库导入到本地的MongoDB数据库中，其代码位于`transfer_data.py`中。我们分别需要sqlite3和pymongo库来连接，操作两个数据
+```python
+sqlite_conn = sqlite3.connect('./fe/data/book.db')
 
+sqlite_cursor = sqlite_conn.cursor()
+
+mongo_client = MongoClient('localhost', 27017) 
+```
+为了得到一个干净的环境，我们先检查本地是否已经有了bookstore数据库，有的话就删除
+```python
+db_list = mongo_client.list_database_names()
+
+print("db_list",db_list)
+
+if 'bookstore' in db_list:
+    mongo_client.drop_database('bookstore')
+    print("Existing 'bookstore' database found and deleted.")
+```
+然后创建bookstore数据库和book集合
+```python
+db = mongo_client['bookstore']  
+book_collection = db['book'] 
+```
+接着选出SQL数据库中的每一列
+```python
+sqlite_cursor.execute("SELECT * FROM book")
+rows = sqlite_cursor.fetchall()
+```
+将每一列信息组装成一个书本的字典，然后插入到MongoDB的book集合中
+```python
+columns = [
+    "id", "title", "author", "publisher", "original_title", "translator", 
+    "pub_year", "pages", "price", "currency_unit", "binding", "isbn", 
+    "author_intro", "book_intro", "content", "tags", "picture"
+]
+
+for row in rows:
+    book_document = {columns[i]: row[i] for i in range(len(columns))}
+    book_collection.insert_one(book_document) 
+```
+最后关闭连接即可
+```python
+sqlite_conn.close()
+mongo_client.close()
+
+print("successfully transfer")
+```
 
 ## 文档数据库的设计
 
@@ -459,7 +506,6 @@ Buyer类继承了DBConn类来进行数据库操作，下面我们介绍其中的
             if res.matched_count == 0:
                 return error.error_non_exist_user_id(user_id)
 ```
-
 ### 卖家功能
 卖家功能的后端逻辑实现在 `bookstore/be/model/seller.py` 中，它提供了 `Seller` 类。
 ```python
@@ -614,6 +660,189 @@ return 200, "ok"
 
 ```
 
+
+
+### 历史订单查询
+```python
+    def search_order(self, user_id: str, password: str) -> (int, str, [(str, str, str, int, int, int)]):
+```
+`search_order`函数用于买家查询历史订单，参数`user_id`为买家的id，`password`为密码。函数返回状态码，消息和一个列表，其中每个元素包含订单id，商店id，书本id，数量，价格和订单状态。
+
+还是和之前一样，首先检查用户id和密码是否合法正确
+```python
+            user_info = self.db.user.find_one({"user_id": user_id})
+            if user_info is None:
+                return error.error_authorization_fail() + ([])
+            if user_info.get("password") != password:
+                return error.error_authorization_fail() + ([])
+```
+然后我们找到用户的所有订单
+```python
+            res = self.db.new_order.find({"user_id": user_id})
+```
+这里有一个特殊情况，就是用户没有任何订单，此时我们正常返回一个空列表并提示
+```python
+            if res is None:
+                return 200, "no orders", []
+```
+接着我们对于每个订单，提取出订单的id，商店id和状态，并用订单id在订单详情表里查找
+```python
+            for row in res:
+                order_id = row["order_id"]
+                store_id = row["store_id"]
+                status = row["books_status"]
+                order_de = self.db.new_order_detail.find({"order_id": order_id})
+```
+然后我们对于每个订单详情，提取出书本id，数量和价格，并加入到返回的列表里
+```python
+                for order_detail in order_de:
+                    for book in order_detail["each_book_details"]:
+                        book_id = book["book_id"]
+                        count = book["count"]
+                        price = book["price"]
+                        order_list.append((order_id, store_id, book_id, count, price, status))
+```
+
+### 订单取消
+#### 用户手动取消
+```python
+    def cancel_order(self, user_id: str, password: str, order_id: str) -> (int, str):
+```
+`cancel_order`函数用于买家取消订单，参数`user_id`为买家的id，`password`为密码，`order_id`为订单的id。函数返回状态码和消息。
+
+判断合法性，找到订单对应的商店id和书籍状态，以及订单详情
+```python
+            user_info = self.db.user.find_one({"user_id": user_id})
+            if user_info is None:
+                return error.error_authorization_fail()
+            if user_info.get("password") != password:
+                return error.error_authorization_fail()
+
+            # find order
+            res = self.db.new_order.find_one({"order_id": order_id})
+            if res == None:
+                return error.error_invalid_order_id(order_id)
+
+            # check order status
+            status = res["books_status"]
+            store_id = res["store_id"]
+            order_list = self.db.new_order_detail.find({"order_id": order_id})
+```
+接下来我们需要分情况考虑，即考虑订单的状态。最简单的是订单未付款，此时我们只需要返还书籍，即更新库存信息
+```python
+            if status == 2:
+                # 返还书籍
+                for order_detail in order_list:
+                    for book in order_detail["each_book_details"]:
+                        book_id = book["book_id"]
+                        count = book["count"]
+                        self.db.store.update_one({"store_id": store_id, "book_stock_info.book_id": book_id}, {"$inc": {"book_stock_info.$.stock_level": count}})
+                self.db.new_order.delete_one({"order_id": order_id})
+                self.db.new_order_detail.delete_many({"order_id": order_id})
+```
+对于每一本书找到数量，并通过之前提取的商店信息更新商店库存。之后为了简单起见，我们直接在两个订单表里删除订单信息。
+
+另外一种情况，已付款未发货要复杂一些，因为这时候除了返还书籍之外，我们还需要退款。因此这里我们需要像之前的支付函数一样，只不过这里我们要检查的是卖家的余额够不够书本的总价
+```python
+            elif status == 1:
+                # 检查商家余额是否足够退款
+                store_info = self.db.user_store.find_one({"store_id": store_id})
+                seller_id = store_info["user_id"]
+                seller_info = self.db.user.find_one({"user_id": seller_id})
+                total_price = 0
+                for order_detail in order_list:
+                    for book in order_detail["each_book_details"]:
+                        price = book["price"]
+                        count = book["count"]
+                        total_price += count * price
+
+                if seller_info["balance"] < total_price:
+                    return error.error_not_sufficient_funds(order_id)
+```
+如果没有问题，就和之前一样返还书籍，当然还需要更新买家和卖家的余额字段来执行退款，并删除订单
+```python
+                # 返还书籍
+                for order_detail in order_list:
+                    for book in order_detail["each_book_details"]:
+                        book_id = book["book_id"]
+                        count = book["count"]
+                        self.db.store.update_one({"store_id": store_id, "book_stock_info.book_id": book_id}, {"$inc": {"book_stock_info.$.stock_level": count}})
+
+                # 返还金额
+                self.db.user.update_one({"user_id": seller_id}, {"$inc": {"balance": -total_price}})
+                self.db.user.update_one({"user_id": user_id}, {"$inc": {"balance": total_price}})
+                self.db.new_order.delete_one({"order_id": order_id})
+                self.db.new_order_detail.delete_many({"order_id": order_id})
+```
+当然还有两种错误情况需要我们处理，即在我们的简单实现里面，卖家发货后是不可以取消订单的
+```python
+            elif status == 0:
+                return error.error_book_has_sent(order_id)
+            elif status == 3:
+                return error.error_book_has_received(order_id)
+```
+#### 未支付超时自动取消
+这个功能相对来说比较复杂，因为它需要一个后台任务来监控超市的订单。为了实现这个功能，我们在`Buyer`类的初始化中添加了启动这个任务的函数
+```python
+    def __init__(self):
+        super().__init__()
+        self.cleanup_thread = None
+        self.is_running = False
+        self.start_cleanup_thread()
+```
+在这里我们利用了`threading`库，为这个线程配置启动和结束函数，在启动时我们调用我们定义的清理过期订单的函数，这里`daemon=True`就表示这个线程是后台守护线程
+```python
+    def start_cleanup_thread(self):
+        #启动后台清理线程
+        self.is_running = True
+        self.cleanup_thread = threading.Thread(target=self._cleanup_expired_orders, daemon=True)
+        self.cleanup_thread.start()
+        logging.info("Started order cleanup thread")
+
+    def stop_cleanup_thread(self):
+        #停止后台清理线程
+        self.is_running = False
+        if self.cleanup_thread:
+            self.cleanup_thread.join()
+            logging.info("Stopped order cleanup thread")
+```
+为了确保资源回收，我们在`Buyer`类的析构函数中停止这个线程
+```python
+    def __del__(self):
+        #确保线程在对象销毁时正确关闭
+        self.stop_cleanup_thread()
+```
+确保这些前置工作准备完毕后，我们实现清理过期订单的函数
+```python
+    def _cleanup_expired_orders(self):
+```
+它的整体逻辑应该是，持续运行，但隔一段时间检查一次。即：
+```python
+        #清理过期订单的后台任务
+        while self.is_running:
+            
+            # 代码逻辑实现   
+            
+            # 每10秒检查一次
+            time.sleep(10)
+```
+这里为了测试方便，我们设置了每10s检查一次，当然在实际生产环境中我们需要调整。
+
+接着我们实现代码逻辑。同样为了测试方便，我们这里的过期时间只有20s，现实中自然是不可能的
+```python
+                # 计算20秒前的时间点
+                expire_time = datetime.now() - timedelta(seconds=20)
+```
+接着我们找出早于超时时间创建，并且未支付（即状态为2）的订单，找到他们的`order_id`，并在两个订单表里删除：
+```python
+                # 先找到过期订单的order_id，再在new_order和new_order_detail中删除
+                expired_orders = self.db.new_order.find({"create_time": {"$lt": expire_time}, "books_status": 2})
+                for order in expired_orders:
+                    order_id = order["order_id"]
+                    self.db.new_order.delete_many({"order_id": order_id})
+                    self.db.new_order_detail.delete_many({"order_id": order_id})
+```
+到这里我们实现了自动取消超时订单的功能。不过这个功能的实现其实由很多可以探讨的地方，我们在这里的实现可能是不够高效的，难以满足实际生产环境的。在未来，我们可以考虑利用数据库的TTL（Time-To-Live）索引，或者是采用更高级的后台任务API和调度工具，例如`apischeduler`等。这个问题需要考虑高并发场景下的性能问题，以及如何保证任务的可靠性和一致性等，有待我们未来进一步探索。
 ### 图书查询
 查询的代码在 `bookstore/be/model/book_searcher.py` 中
 #### 查询给定标题的图书 
@@ -697,189 +926,7 @@ def search_author(self, author: str, page_num: int, page_size: int):
 	return self.search_content_in_store(author, "", page_num, page_size)
 ```
 
-## 历史订单查询
-```python
-    def search_order(self, user_id: str, password: str) -> (int, str, [(str, str, str, int, int, int)]):
-```
-`search_order`函数用于买家查询历史订单，参数`user_id`为买家的id，`password`为密码。函数返回状态码，消息和一个列表，其中每个元素包含订单id，商店id，书本id，数量，价格和订单状态。
-
-还是和之前一样，首先检查用户id和密码是否合法正确
-```python
-            user_info = self.db.user.find_one({"user_id": user_id})
-            if user_info is None:
-                return error.error_authorization_fail() + ([])
-            if user_info.get("password") != password:
-                return error.error_authorization_fail() + ([])
-```
-然后我们找到用户的所有订单
-```python
-            res = self.db.new_order.find({"user_id": user_id})
-```
-这里有一个特殊情况，就是用户没有任何订单，此时我们正常返回一个空列表并提示
-```python
-            if res is None:
-                return 200, "no orders", []
-```
-接着我们对于每个订单，提取出订单的id，商店id和状态，并用订单id在订单详情表里查找
-```python
-            for row in res:
-                order_id = row["order_id"]
-                store_id = row["store_id"]
-                status = row["books_status"]
-                order_de = self.db.new_order_detail.find({"order_id": order_id})
-```
-然后我们对于每个订单详情，提取出书本id，数量和价格，并加入到返回的列表里
-```python
-                for order_detail in order_de:
-                    for book in order_detail["each_book_details"]:
-                        book_id = book["book_id"]
-                        count = book["count"]
-                        price = book["price"]
-                        order_list.append((order_id, store_id, book_id, count, price, status))
-```
-
-## 订单取消
-### 用户手动取消
-```python
-    def cancel_order(self, user_id: str, password: str, order_id: str) -> (int, str):
-```
-`cancel_order`函数用于买家取消订单，参数`user_id`为买家的id，`password`为密码，`order_id`为订单的id。函数返回状态码和消息。
-
-判断合法性，找到订单对应的商店id和书籍状态，以及订单详情
-```python
-            user_info = self.db.user.find_one({"user_id": user_id})
-            if user_info is None:
-                return error.error_authorization_fail()
-            if user_info.get("password") != password:
-                return error.error_authorization_fail()
-
-            # find order
-            res = self.db.new_order.find_one({"order_id": order_id})
-            if res == None:
-                return error.error_invalid_order_id(order_id)
-
-            # check order status
-            status = res["books_status"]
-            store_id = res["store_id"]
-            order_list = self.db.new_order_detail.find({"order_id": order_id})
-```
-接下来我们需要分情况考虑，即考虑订单的状态。最简单的是订单未付款，此时我们只需要返还书籍，即更新库存信息
-```python
-            if status == 2:
-                # 返还书籍
-                for order_detail in order_list:
-                    for book in order_detail["each_book_details"]:
-                        book_id = book["book_id"]
-                        count = book["count"]
-                        self.db.store.update_one({"store_id": store_id, "book_stock_info.book_id": book_id}, {"$inc": {"book_stock_info.$.stock_level": count}})
-                self.db.new_order.delete_one({"order_id": order_id})
-                self.db.new_order_detail.delete_many({"order_id": order_id})
-```
-对于每一本书找到数量，并通过之前提取的商店信息更新商店库存。之后为了简单起见，我们直接在两个订单表里删除订单信息。
-
-另外一种情况，已付款未发货要复杂一些，因为这时候除了返还书籍之外，我们还需要退款。因此这里我们需要像之前的支付函数一样，只不过这里我们要检查的是卖家的余额够不够书本的总价
-```python
-            elif status == 1:
-                # 检查商家余额是否足够退款
-                store_info = self.db.user_store.find_one({"store_id": store_id})
-                seller_id = store_info["user_id"]
-                seller_info = self.db.user.find_one({"user_id": seller_id})
-                total_price = 0
-                for order_detail in order_list:
-                    for book in order_detail["each_book_details"]:
-                        price = book["price"]
-                        count = book["count"]
-                        total_price += count * price
-
-                if seller_info["balance"] < total_price:
-                    return error.error_not_sufficient_funds(order_id)
-```
-如果没有问题，就和之前一样返还书籍，当然还需要更新买家和卖家的余额字段来执行退款，并删除订单
-```python
-                # 返还书籍
-                for order_detail in order_list:
-                    for book in order_detail["each_book_details"]:
-                        book_id = book["book_id"]
-                        count = book["count"]
-                        self.db.store.update_one({"store_id": store_id, "book_stock_info.book_id": book_id}, {"$inc": {"book_stock_info.$.stock_level": count}})
-
-                # 返还金额
-                self.db.user.update_one({"user_id": seller_id}, {"$inc": {"balance": -total_price}})
-                self.db.user.update_one({"user_id": user_id}, {"$inc": {"balance": total_price}})
-                self.db.new_order.delete_one({"order_id": order_id})
-                self.db.new_order_detail.delete_many({"order_id": order_id})
-```
-当然还有两种错误情况需要我们处理，即在我们的简单实现里面，卖家发货后是不可以取消订单的
-```python
-            elif status == 0:
-                return error.error_book_has_sent(order_id)
-            elif status == 3:
-                return error.error_book_has_received(order_id)
-```
-### 未支付超时自动取消
-这个功能相对来说比较复杂，因为它需要一个后台任务来监控超市的订单。为了实现这个功能，我们在`Buyer`类的初始化中添加了启动这个任务的函数
-```python
-    def __init__(self):
-        super().__init__()
-        self.cleanup_thread = None
-        self.is_running = False
-        self.start_cleanup_thread()
-```
-在这里我们利用了`threading`库，为这个线程配置启动和结束函数，在启动时我们调用我们定义的清理过期订单的函数，这里`daemon=True`就表示这个线程是后台守护线程
-```python
-    def start_cleanup_thread(self):
-        #启动后台清理线程
-        self.is_running = True
-        self.cleanup_thread = threading.Thread(target=self._cleanup_expired_orders, daemon=True)
-        self.cleanup_thread.start()
-        logging.info("Started order cleanup thread")
-
-    def stop_cleanup_thread(self):
-        #停止后台清理线程
-        self.is_running = False
-        if self.cleanup_thread:
-            self.cleanup_thread.join()
-            logging.info("Stopped order cleanup thread")
-```
-为了确保资源回收，我们在`Buyer`类的析构函数中停止这个线程
-```python
-    def __del__(self):
-        #确保线程在对象销毁时正确关闭
-        self.stop_cleanup_thread()
-```
-确保这些前置工作准备完毕后，我们实现清理过期订单的函数
-```python
-    def _cleanup_expired_orders(self):
-```
-它的整体逻辑应该是，持续运行，但隔一段时间检查一次。即：
-```python
-        #清理过期订单的后台任务
-        while self.is_running:
-            
-            # 代码逻辑实现   
-            
-            # 每10秒检查一次
-            time.sleep(10)
-```
-这里为了测试方便，我们设置了每10s检查一次，当然在实际生产环境中我们需要调整。
-
-接着我们实现代码逻辑。同样为了测试方便，我们这里的过期时间只有20s，现实中自然是不可能的
-```python
-                # 计算20秒前的时间点
-                expire_time = datetime.now() - timedelta(seconds=20)
-```
-接着我们找出早于超时时间创建，并且未支付（即状态为2）的订单，找到他们的`order_id`，并在两个订单表里删除：
-```python
-                # 先找到过期订单的order_id，再在new_order和new_order_detail中删除
-                expired_orders = self.db.new_order.find({"create_time": {"$lt": expire_time}, "books_status": 2})
-                for order in expired_orders:
-                    order_id = order["order_id"]
-                    self.db.new_order.delete_many({"order_id": order_id})
-                    self.db.new_order_detail.delete_many({"order_id": order_id})
-```
-到这里我们实现了自动取消超时订单的功能。不过这个功能的实现其实由很多可以探讨的地方，我们在这里的实现可能是不够高效的，难以满足实际生产环境的。在未来，我们可以考虑利用数据库的TTL（Time-To-Live）索引，或者是采用更高级的后台任务API和调度工具，例如`apischeduler`等。这个问题需要考虑高并发场景下的性能问题，以及如何保证任务的可靠性和一致性等，有待我们未来进一步探索。
-
-## 书籍推荐
+### 书籍推荐
 由于本次实验中我们实现了用户历史订单查询和图书搜索两个功能，因此一个自然的想法是能否把这两个功能结合起来做一些事情，我们据此设计了一个简易的“猜你想看”：
 ```python
     def recommend_books(self, user_id: str, password: str):
@@ -987,17 +1034,18 @@ def search_author(self, author: str, page_num: int, page_size: int):
 
 **前端接口fe/access**：
 
-这里主要是根据新增的路由添加对应的参数处理函数，将参数以post方式发送至对应的路由。这里值得一提的是，在debug过程中，若没有涉及比较复杂的数据准备，我们可以直接用postman工具来模拟访问某一路由。
+这里主要是根据新增的路由添加对应的参数处理函数，利用requests库，将参数组装好之后以post方式发送至对应的路由，再提取响应的返回码。这里值得一提的是，在debug过程中，若没有涉及比较复杂的数据准备，我们可以直接用postman工具来模拟访问某一路由。
 
-**后端接口在 be/view/** ：
+**后端接口be/view/** ：
 
-这里的修改与前端同理，主要是接受前端传递来的参数，然后根据其路由选择对应的函数进行处理。值得注意的是，我们并没有给自动取消添加接口，因为这是一个在后台自动运行的任务，在正常的逻辑中不会涉及前端访问。
+这里的修改与前端同理，主要是接受前端传递来的参数，解析JSON数据，然后根据其路由选择对应的函数进行处理，再返回JSON数据，包括消息和状态码等。值得注意的是，我们并没有给自动取消添加接口，因为这是一个在后台自动运行的任务，在正常的逻辑中不会涉及前端访问。其他新增功能，包括收发货，历史订单查询，手动取消和书本推荐则在buyer/seller中添加了相应的接口。
 
 
 
-## 新增的测试样例
-
+## 测试
+测试样例均位于`fe/test`中，包括已经提供的基础功能测试和我们新加的拓展功能测试，每一个测试类都会根据功能需要进行一个基本的初始化，创建买家卖家等。
 ### `test_receive_and_delivery.py`
+
 
 **收获和发货测试代码**路径：`bookstore\fe\test\test_receive_and_delivery.py`。测试说明如下
 
