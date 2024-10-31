@@ -123,7 +123,7 @@ class Seller(db_conn.DBConn):
         store_id = res["store_id"]
         books_status = res["books_status"]
 
-        # ¸ù¾Ý store_id ÕÒÂô¼Ò
+        # æ ¹æ® store_id æ‰¾å–å®¶
         result = self.db.user_store.find_one({"store_id": store_id})
         seller_id = result["user_id"]
 
@@ -140,5 +140,5 @@ class Seller(db_conn.DBConn):
             return error.error_book_has_received(order_id)
 
         res = self.db.new_order.update_one({"order_id": order_id}, {"$set": {"books_status": 0}})
-        assert res.modified_count > 0 #only for debug£¬it may also be equal to zero when multi-proc.
+        assert res.modified_count > 0 #only for debugï¼Œit may also be equal to zero when multi-proc.
         return 200, "ok"
