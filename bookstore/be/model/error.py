@@ -15,7 +15,7 @@ error_code = {
     523: "book in order {} hasn't been sent",
     524: "book in order {} has been sent repeatively",
     525: "repeated payment of order {}",
-    526: "",
+    526: "book not exist",
     527: "",
     528: "",
 }

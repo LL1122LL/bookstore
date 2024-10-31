@@ -230,22 +230,31 @@ class Buyer(db_conn.DBConn):
     #search book
     def search(self, keyword, store_id=None, page=1, per_page=10):
         try:
+            # 全文搜索
             query = {"$text": {"$search": keyword}}
+
+            # 如果指定了 store_id，则限定书籍范围
             if store_id:
-                result1 = self.conn.store.find({"store_id": store_id}, {"books.book_id": 1, "_id": 0})
-                for result in result1:
-                    print(result)
-                books_id = [i["book_id"] for i in result1["books"]]
+                # 提取指定商店中的 book_id 列表
+                books_id = [
+                    book["book_id"] 
+                    for store in self.db.store.find({"store_id": store_id}, {"book_stock_info.book_id": 1, "_id": 0})
+                    for book in store.get("book_stock_info", [])
+                ]
                 query["id"] = {"$in": books_id}
 
-            result = self.db.book.find(query,
-                                              {"score": {"$meta": "textScore"}, "_id": 0, "picture": 0}).sort(
-                [("score", {"$meta": "textScore"})])
-
-            result.skip((int(page) - 1) * per_page).limit(per_page)
-        except BaseException as e:
-            return 530, f"{str(e)}"
-        return 200, list(result)
+            # 执行查询，排序，分页
+            result = (
+                self.db.book.find(query, {"score": {"$meta": "textScore"}, "_id": 0, "picture": 0})
+                .sort("score", {"$meta": "textScore"})
+                .skip((page - 1) * per_page)
+                .limit(per_page)
+            )
+            
+            return 200, list(result)
+        
+        except Exception as e:
+            return 530, str(e)
 
     # 用户查询历史订单
     def search_order(self, user_id: str, password: str) -> (int, str, [(str, str, str, int, int, int)]):

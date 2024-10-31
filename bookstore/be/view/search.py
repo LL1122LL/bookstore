@@ -3,7 +3,7 @@ import json
 from flask import Blueprint
 from flask import request
 from flask import jsonify
-from be.model.book import Book
+from be.model.book_searcher import BookSearcher
 
 bp_search = Blueprint("search", __name__, url_prefix="/search")
 
@@ -27,9 +27,9 @@ def search_title_in_store():
         page_num = 1
     if page_size is None:
         page_size = 10
-    book = Book()
+    book = BookSearcher()
     code, message, books = book.search_title_in_store(title, store_id, page_num, page_size)
-    # return jsonify({"data": books, "message": message, "code": code})
+    
     return jsonify({"data": str(books), "message": message, "code": code})
 
 @bp_search.route("/tag", methods=["GET"])
@@ -51,7 +51,7 @@ def search_tag_in_store():
         page_num = 1
     if page_size is None:
         page_size = 10
-    book = Book()
+    book = BookSearcher()
     code, message, books = book.search_tag_in_store(tag, store_id, page_num, page_size)
     return jsonify({"data": str(books), "message": message, "code": code})
 
@@ -75,7 +75,7 @@ def search_content_in_store():
         page_num = 1
     if page_size is None:
         page_size = 10
-    book = Book()
+    book = BookSearcher()
     code, message, books = book.search_content_in_store(content, store_id, page_num, page_size)
     return jsonify({"data": str(books), "message": message, "code": code})
 
@@ -99,6 +99,6 @@ def search_author_in_store():
         page_num = 1
     if page_size is None:
         page_size = 10
-    book = Book()
+    book = BookSearcher()
     code, message, books = book.search_author_in_store(author, store_id, page_num, page_size)
     return jsonify({"data": str(books), "message": message, "code": code})
