@@ -615,7 +615,7 @@ return 200, "ok"
 ```
 
 ### 图书查询
-查询的代码在 `/be/model/book_searcher.py` 中
+查询的代码在 `bookstore/be/model/book_searcher.py` 中
 #### 查询给定标题的图书 
 ```python
 def search_title_in_store(
