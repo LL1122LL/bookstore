@@ -54,7 +54,7 @@ class User(db_conn.DBConn):
             return False
 
     def register(self, user_id: str, password: str):
-        # 检查用户是否已存在
+        # 妫�鏌ョ敤鎴锋槸鍚﹀凡瀛樺湪
         res = self.db.user.find_one({"user_id": user_id})
         if res is not None:
             return error.error_exist_user_id(user_id)
